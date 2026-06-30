@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>合作邀約 — 薯餅 葉書銘 短影音剪輯 [待客戶確認]</title>
+  <meta name="description" content="想讓頻道短影音有更好的成效？找葉書銘（薯餅）聊聊選題方向、剪輯合作與社群內容經營規劃。[待客戶確認]">
+  <link rel="canonical" href="https://editor-site.editor-vincent.workers.dev/contact">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="zh_TW">
+  <meta property="og:site_name" content="薯餅 葉書銘">
+  <meta property="og:title" content="合作邀約 — 薯餅 葉書銘 短影音剪輯">
+  <meta property="og:description" content="想讓頻道短影音有更好的成效？找葉書銘（薯餅）聊聊選題方向、剪輯合作與社群內容經營規劃。">
+  <meta property="og:url" content="https://editor-site.editor-vincent.workers.dev/contact">
+  <meta property="og:image" content="https://editor-site.editor-vincent.workers.dev/posters/og-cover.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="合作邀約 — 薯餅 葉書銘 短影音剪輯">
+  <meta name="twitter:description" content="想讓頻道短影音有更好的成效？找葉書銘（薯餅）聊聊選題方向、剪輯合作與社群內容經營規劃。">
+  <meta name="twitter:image" content="https://editor-site.editor-vincent.workers.dev/posters/og-cover.jpg">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="vendors/lenis/lenis.css">
+  <link rel="stylesheet" href="css/core.css">
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+</head>
+
+<body data-page="contact">
+  <div class="scrubber" id="scrubber"></div>
+
+  <div id="site-nav"></div>
+
+  <header class="phead wrap">
+    <div class="tc">00:00 <b>—</b> 開始合作</div>
+    <h1>有片想剪？<br>聊聊你的需求。</h1>
+    <p>填下面的表單，我會用 Email 回你。一般 1～2 個工作天內回覆。</p>
+  </header>
+
+  <section class="sec wrap contact" id="form" style="padding-top:clamp(8px,2vw,16px)">
+    <div class="contact-grid">
+      <form method="POST" action="/api/contact">
+        <label>姓名<input name="name" required autocomplete="name"></label>
+        <label>EMAIL<input type="email" name="email" required autocomplete="email"></label>
+        <label>影片類型<select name="video_type" required>
+            <option value="" disabled selected>請選擇</option>
+            <option>短影音（Shorts / Reels）</option>
+            <option>長片 / YouTube 影片</option>
+            <option>社群短影音經營</option>
+            <option>品牌 / 商業合作</option>
+            <option>都想了解</option>
+          </select></label>
+        <label>需求內容<textarea name="message" required placeholder="影片類型、長度、數量、時間規劃、預算範圍"></textarea></label>
+        <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <div class="consent">
+          <ul class="consent-note">
+            <li>你填寫的姓名、Email 與需求內容，僅用於回覆與洽談合作。</li>
+            <li>這些資料不會提供給第三方，也不會用於其他用途。</li>
+          </ul>
+          <label class="consent-label"><input type="checkbox" name="consent" value="yes" class="consent-check"
+              required><span>我已閱讀並同意上述個資說明</span></label>
+        </div>
+        <div class="cf-turnstile" data-sitekey="1x00000000000000000000AA" data-theme="dark"></div>
+        <button type="submit" data-label="送出需求" disabled>請同意個資說明</button>
+      </form>
+      <aside class="contact-info">
+        <div class="ci-block">
+          <div class="tc">其他方式</div>
+          <a class="ci-email js-email" data-email="tonyyeh080586@gmail.com"
+            href="mailto:tonyyeh080586@gmail.com">tonyyeh080586@gmail.com</a>
+          <div class="socials">
+            <a href="#" target="_blank" rel="noopener noreferrer" aria-label="YouTube"><svg viewBox="0 0 24 24"
+                aria-hidden="true">
+                <path
+                  d="M23 12s0-3.2-.4-4.7a2.5 2.5 0 0 0-1.8-1.8C19.3 5 12 5 12 5s-7.3 0-8.8.5A2.5 2.5 0 0 0 1.4 7.3C1 8.8 1 12 1 12s0 3.2.4 4.7a2.5 2.5 0 0 0 1.8 1.8C4.7 19 12 19 12 19s7.3 0 8.8-.5a2.5 2.5 0 0 0 1.8-1.8C23 15.2 23 12 23 12ZM9.8 15.3V8.7l5.7 3.3-5.7 3.3Z" />
+              </svg></a>
+            <a href="#" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><svg viewBox="0 0 24 24"
+                aria-hidden="true">
+                <path
+                  d="M12 2.2c3.2 0 3.6 0 4.8.07 1.2.05 1.8.25 2.2.42.6.22 1 .48 1.4.9.4.4.7.8.9 1.4.17.4.37 1 .42 2.2.06 1.2.07 1.6.07 4.8s0 3.6-.07 4.8c-.05 1.2-.25 1.8-.42 2.2a3.7 3.7 0 0 1-.9 1.4c-.4.4-.8.7-1.4.9-.4.17-1 .37-2.2.42-1.2.06-1.6.07-4.8.07s-3.6 0-4.8-.07c-1.2-.05-1.8-.25-2.2-.42a3.7 3.7 0 0 1-1.4-.9 3.7 3.7 0 0 1-.9-1.4c-.17-.4-.37-1-.42-2.2C2.2 15.6 2.2 15.2 2.2 12s0-3.6.07-4.8c.05-1.2.25-1.8.42-2.2.22-.6.5-1 .9-1.4.4-.4.8-.68 1.4-.9.4-.17 1-.37 2.2-.42C8.4 2.2 8.8 2.2 12 2.2Zm0 1.8c-3.1 0-3.5 0-4.7.07-.9.04-1.4.2-1.7.32-.43.17-.74.37-1.06.7-.32.31-.52.62-.7 1.05-.12.3-.28.8-.32 1.7C3.2 9 3.2 9.4 3.2 12s0 3 .07 4.1c.04.9.2 1.4.32 1.7.17.43.37.74.7 1.06.31.32.62.52 1.05.7.3.12.8.28 1.7.32 1.2.06 1.6.07 4.7.07s3.5 0 4.7-.07c.9-.04 1.4-.2 1.7-.32.43-.17.74-.37 1.06-.7.32-.31.52-.62.7-1.05.12-.3.28-.8.32-1.7.06-1.2.07-1.6.07-4.7s0-3-.07-4.1c-.04-.9-.2-1.4-.32-1.7a2.8 2.8 0 0 0-.7-1.06 2.8 2.8 0 0 0-1.05-.7c-.3-.12-.8-.28-1.7-.32C15.5 4 15.1 4 12 4Zm0 3.05A4.95 4.95 0 1 1 7.05 12 4.95 4.95 0 0 1 12 7.05Zm0 1.8A3.15 3.15 0 1 0 15.15 12 3.15 3.15 0 0 0 12 8.85Zm5.15-3.3a1.15 1.15 0 1 1-1.15 1.15 1.15 1.15 0 0 1 1.15-1.15Z" />
+              </svg></a>
+          </div>
+          <p class="ci-note">一般 1–2 個工作天回覆</p>
+        </div>
+
+        <div class="ci-block">
+          <div class="tc">適合的合作</div>
+          <div class="ci-tags">
+            <span>短影音剪輯</span>
+            <span>Shorts／Reels 系列</span>
+            <span>社群短影音經營</span>
+            <span>YT 長影音</span>
+            <span>活動紀錄、花絮</span>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <div id="site-footer"></div>
+
+  <script src="vendors/lenis/lenis.min.js"></script>
+  <script src="js/partials.js"></script>
+  <script src="js/app.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,223 @@
+/* work.css — 作品集（首頁作品 teaser 也用）：篩選 / 瀑布流卡片 / 載入更多
+   由 styles.css 拆分；變數(:root)在 core.css，請先載入 core.css。 */
+
+/* WORK masonry */
+.filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+.filter button {
+  font-family: var(--fm);
+  font-size: 14px;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--line);
+  padding: 9px 18px;
+  border-radius: var(--pill);
+  cursor: pointer;
+  transition: 0.2s;
+}
+.filter button:hover {
+  color: var(--ink);
+  border-color: var(--muted-2);
+}
+.filter button[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+  font-weight: 700;
+}
+.wall {
+  /* column-count: 2;
+  column-gap: clamp(12px, 1.4vw, 18px); */
+  position: relative;
+  visibility: hidden;
+}
+@media (min-width: 640px) {
+  .wall {
+    column-count: 3;
+  }
+}
+@media (min-width: 1024px) {
+  .wall {
+    column-count: 4;
+  }
+}
+.w {
+  break-inside: avoid;
+  margin-bottom: 0;
+  position: relative;
+  display: block;
+  border-radius: var(--r);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  transition:
+    transform 0.35s ease,
+    border-color 0.35s ease;
+}
+.w:hover,
+.w:focus-visible {
+  transform: translateY(-4px);
+  border-color: var(--accent);
+}
+.w .media {
+  position: relative;
+  overflow: hidden;
+}
+.w .media.r916 {
+  aspect-ratio: 9/16;
+}
+.w .media.r169 {
+  aspect-ratio: 16/9;
+}
+.w .media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.8);
+  transition:
+    transform 0.5s ease,
+    filter 0.5s ease;
+}
+.w:hover .media img {
+  transform: scale(1.06);
+  filter: brightness(1);
+}
+.w .ph {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--muted-2);
+  font-family: var(--fm);
+  font-size: 12px;
+  text-align: center;
+  padding: 10px;
+  background: radial-gradient(130% 100% at 70% 12%, #262019, #0d0c0a 72%);
+}
+.w .badge {
+  position: absolute;
+  top: 9px;
+  left: 9px;
+  font-family: var(--fm);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  background: rgba(11, 11, 13, 0.7);
+  padding: 3px 7px;
+  border-radius: var(--pill);
+  text-transform: uppercase;
+}
+.w .cat-tag {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  font-family: var(--fm);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  /* color: var(--on-accent); */
+  /* background: var(--accent); */
+  background: rgba(11, 11, 13, 0.78);
+  padding: 3px 7px;
+  border-radius: var(--pill);
+}
+.w .dur {
+  position: absolute;
+  left: 9px;
+  bottom: 9px;
+  font-family: var(--fm);
+  font-size: 11px;
+  color: var(--muted);
+  background: rgba(11, 11, 13, 0.78);
+  padding: 4px 8px;
+  border-radius: var(--pill);
+  display: none;
+}
+.w .views {
+  position: absolute;
+  right: 9px;
+  bottom: 9px;
+  font-family: var(--fm);
+  font-size: 11px;
+  background: rgba(11, 11, 13, 0.78);
+  padding: 4px 8px;
+  border-radius: var(--pill);
+}
+.w .ov {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 14px;
+  background: linear-gradient(transparent 40%, rgba(11, 11, 13, 0.82));
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.w:hover .ov {
+  opacity: 1;
+}
+.w .ov h3 {
+  font-weight: 700;
+  font-size: 16px;
+  margin: 0 0 2px;
+}
+.w .ov p {
+  margin: 0;
+  font-family: var(--fm);
+  font-size: 11px;
+  color: var(--accent);
+}
+
+/* 作品卡點擊輕微回饋（按下感） */
+.w:active {
+  transform: scale(0.97);
+}
+@media (prefers-reduced-motion: reduce) {
+  .w:active {
+    transform: none;
+  }
+}
+
+/* 「載入更多」按鈕（作品集） */
+.loadmore-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: clamp(28px, 4vw, 44px);
+}
+.loadmore {
+  font-family: var(--fm);
+  font-size: 14px;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--line);
+  padding: 13px 28px;
+  border-radius: var(--pill);
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    color 0.2s,
+    transform 0.2s;
+}
+.loadmore:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-2px);
+}
+
+/* IG 方形貼文 1:1 卡片 */
+.w .media.r11 {
+  aspect-ratio: 1/1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .w,
+  .w .media img {
+    transition: none;
+  }
+  .loadmore:hover {
+    transform: none;
+  }
+}

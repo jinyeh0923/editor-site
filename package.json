@@ -1,0 +1,14 @@
+{
+  "name": "editor-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:local": "wrangler d1 execute editor-site-db --local --file=./schema.sql",
+    "db:remote": "wrangler d1 execute editor-site-db --remote --file=./schema.sql"
+  },
+  "devDependencies": {
+    "wrangler": "^4.105.0"
+  }
+}

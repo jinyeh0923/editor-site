@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>作品集 — 薯餅 葉書銘 短影音剪輯 [待客戶確認]</title>
+  <meta name="description" content="葉書銘（薯餅）短影音剪輯作品精選：Shorts、Reels、運動、訪談、品牌短片，完整呈現從選題企劃到剪輯包裝的社群內容經營成果。[待客戶確認]">
+  <link rel="canonical" href="https://editor-site.editor-vincent.workers.dev/work">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="zh_TW">
+  <meta property="og:site_name" content="薯餅 葉書銘">
+  <meta property="og:title" content="作品集 — 薯餅 葉書銘 短影音剪輯">
+  <meta property="og:description" content="葉書銘（薯餅）短影音剪輯作品精選：Shorts、Reels、運動、訪談、品牌短片，完整呈現從選題企劃到剪輯包裝的社群內容經營成果。">
+  <meta property="og:url" content="https://editor-site.editor-vincent.workers.dev/work">
+  <meta property="og:image" content="https://editor-site.editor-vincent.workers.dev/posters/og-cover.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="作品集 — 薯餅 葉書銘 短影音剪輯">
+  <meta name="twitter:description" content="葉書銘（薯餅）短影音剪輯作品精選：Shorts、Reels、運動、訪談、品牌短片，完整呈現從選題企劃到剪輯包裝的社群內容經營成果。">
+  <meta name="twitter:image" content="https://editor-site.editor-vincent.workers.dev/posters/og-cover.jpg">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="vendors/lenis/lenis.css">
+  <link rel="stylesheet" href="css/core.css">
+  <link rel="stylesheet" href="css/work.css">
+</head>
+
+<body data-page="work">
+  <div class="scrubber" id="scrubber"></div>
+
+  <div id="site-nav"></div>
+
+  <header class="phead wrap">
+    <div class="tc">01:00 <b>—</b> 全部作品</div>
+    <h1>作品集</h1>
+    <p>以 9:16 短影音為主，穿插 16:9 長片。用下面的分類快速篩選。</p>
+  </header>
+
+  <section class="wrap" style="padding-bottom:clamp(64px,9vw,128px)">
+    <div class="filter" id="filter" role="group" aria-label="作品分類篩選"></div>
+    <div class="wall" id="wall" data-cols="5"></div>
+    <div class="loadmore-wrap" id="loadmore-wrap" style="display:none">
+      <button class="loadmore" id="loadmore" type="button">載入更多</button>
+    </div>
+  </section>
+
+  <div id="site-footer"></div>
+
+  <script src="js/works.js"></script>
+  <script src="vendors/lenis/lenis.min.js"></script>
+  <script src="js/partials.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/masonry.js"></script>
+  <script>
+    var wall = document.getElementById("wall");
+    var filterBar = document.getElementById("filter");
+    var lmWrap = document.getElementById("loadmore-wrap");
+    var lmBtn = document.getElementById("loadmore");
+
+    var INITIAL = 12, STEP = 12, THRESHOLD = 16; // 清單超過 16 個才分批，一次 12 個
+    var currentList = WORKS, shown = INITIAL;
+
+    var cats = ["全部"].concat([...new Set(WORKS.map(function (w) { return w.cat; }))]);
+    filterBar.innerHTML = cats.map(function (c, i) {
+      return '<button type="button" data-cat="' + c + '" aria-pressed="' + (i === 0) + '">' + c + '</button>';
+    }).join("");
+
+    function paint() {
+      var paginate = currentList.length > THRESHOLD;
+      var list = paginate ? currentList.slice(0, shown) : currentList;
+      renderWork(wall, list);
+      if (paginate && shown < currentList.length) {
+        lmWrap.style.display = "flex";
+        lmBtn.textContent = "載入更多（ 剩 " + (currentList.length - shown) + " ）";
+      } else {
+        lmWrap.style.display = "none";
+      }
+    }
+
+    function apply(cat) {
+      currentList = cat === "全部" ? WORKS : WORKS.filter(function (w) { return w.cat === cat; });
+      shown = INITIAL;
+      paint();
+    }
+
+    filterBar.addEventListener("click", function (e) {
+      var btn = e.target.closest("button"); if (!btn) return;
+      filterBar.querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", b === btn); });
+      apply(btn.getAttribute("data-cat"));
+    });
+    lmBtn.addEventListener("click", function () { shown += STEP; paint(); });
+
+    apply("全部");
+  </script>
+</body>
+
+</html>

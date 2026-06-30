@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="zh-Hant">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>表單後台 — 薯餅</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="css/core.css">
+  <style>
+    body {
+      padding: clamp(20px, 4vw, 48px)
+    }
+
+    .admin-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 28px
+    }
+
+    .admin-head h1 {
+      font-weight: 900;
+      font-size: clamp(26px, 4vw, 40px);
+      margin: 0
+    }
+
+    .admin-head .count {
+      font-family: var(--fm);
+      font-size: 13px;
+      color: var(--accent)
+    }
+
+    .admin-head button {
+      font-family: var(--fm);
+      font-size: 13px;
+      color: var(--ink);
+      background: transparent;
+      border: 1px solid var(--line);
+      padding: 9px 18px;
+      border-radius: var(--pill);
+      cursor: pointer;
+      transition: .2s
+    }
+
+    .admin-head button:hover {
+      border-color: var(--accent);
+      color: var(--accent)
+    }
+
+    .tablewrap {
+      border: 1px solid var(--line);
+      border-radius: var(--r);
+      overflow: auto;
+      background: var(--bg-2)
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 760px
+    }
+
+    th,
+    td {
+      padding: 12px 14px;
+      text-align: left;
+      vertical-align: top;
+      font-size: 14px;
+      border-bottom: 1px solid var(--line)
+    }
+
+    th {
+      font-family: var(--fm);
+      font-size: 12px;
+      letter-spacing: .05em;
+      color: var(--muted);
+      text-transform: uppercase;
+      background: rgba(255, 255, 255, .02);
+      position: sticky;
+      top: 0
+    }
+
+    td .time {
+      font-family: var(--fm);
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap
+    }
+
+    td .msg {
+      max-width: 42ch;
+      white-space: pre-wrap;
+      word-break: break-word
+    }
+
+    td a {
+      color: var(--accent)
+    }
+
+    .tag {
+      font-family: var(--fm);
+      font-size: 11px;
+      border: 1px solid var(--line);
+      padding: 3px 8px;
+      border-radius: var(--pill);
+      color: var(--muted);
+      white-space: nowrap
+    }
+
+    .empty,
+    .err {
+      font-family: var(--fm);
+      color: var(--muted);
+      padding: 28px;
+      text-align: center
+    }
+
+    .err {
+      color: #ff6b6b
+    }
+  </style>
+</head>
+
+<body>
+  <div class="admin-head">
+    <div>
+      <h1>訪客表單 <span class="count" id="count"></span></h1>
+    </div>
+    <button id="refresh" type="button">重新整理</button>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr>
+          <th>時間</th>
+          <th>姓名</th>
+          <th>Email</th>
+          <th>類型</th>
+          <th>狀態</th>
+          <th>內容</th>
+        </tr>
+      </thead>
+      <tbody id="rows">
+        <tr>
+          <td colspan="6" class="empty">載入中…</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    var rows = document.getElementById("rows");
+    var countEl = document.getElementById("count");
+
+    function fmtTime(iso) {
+      try {
+        var d = new Date(iso);
+        var date = d.toLocaleDateString("zh-TW", { year: "numeric", month: "2-digit", day: "2-digit" });
+        var wd = d.toLocaleDateString("zh-TW", { weekday: "short" }); // 週五
+        return date + "（" + wd + "）";
+      } catch (e) { return iso || ""; }
+    }
+    function cell(text, cls) {
+      var td = document.createElement("td");
+      if (cls) td.className = cls;
+      td.textContent = text == null ? "" : String(text); // textContent → 不會被 XSS
+      return td;
+    }
+    function render(list) {
+      countEl.textContent = "（" + list.length + " 筆）";
+      rows.innerHTML = "";
+      if (!list.length) {
+        rows.innerHTML = '<tr><td colspan="6" class="empty">目前沒有資料</td></tr>';
+        return;
+      }
+      list.forEach(function (r) {
+        var tr = document.createElement("tr");
+        var tTime = document.createElement("td"); var sp = document.createElement("span"); sp.className = "time"; sp.textContent = fmtTime(r.created_at); tTime.appendChild(sp);
+        tr.appendChild(tTime);
+        tr.appendChild(cell(r.name));
+        // email 做成 mailto，但 textContent 設定文字、href 用 encodeURIComponent 防注入
+        var tdEmail = document.createElement("td");
+        var a = document.createElement("a");
+        a.href = "mailto:" + encodeURIComponent(r.email || "");
+        a.textContent = r.email || "";
+        tdEmail.appendChild(a);
+        tr.appendChild(tdEmail);
+        // 類型 tag
+        var tdType = document.createElement("td");
+        if (r.video_type) { var sp2 = document.createElement("span"); sp2.className = "tag"; sp2.textContent = r.video_type; tdType.appendChild(sp2); }
+        tr.appendChild(tdType);
+        tr.appendChild(cell(r.status || "new"));
+        tr.appendChild(cell(r.message, "msg"));
+        rows.appendChild(tr);
+      });
+    }
+
+    function load() {
+      rows.innerHTML = '<tr><td colspan="6" class="empty">載入中…</td></tr>';
+      fetch("/api/admin/submissions", { headers: { "Accept": "application/json" } })
+        .then(function (res) { if (!res.ok) throw new Error(res.status); return res.json(); })
+        .then(render)
+        .catch(function (err) {
+          rows.innerHTML = '<tr><td colspan="6" class="err">讀取失敗（' + err.message + '）。請重新整理或重新登入。</td></tr>';
+          countEl.textContent = "";
+        });
+    }
+    document.getElementById("refresh").addEventListener("click", load);
+    load();
+  </script>
+</body>
+
+</html>

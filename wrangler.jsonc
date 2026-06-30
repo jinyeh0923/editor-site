@@ -1,0 +1,29 @@
+{
+  // 專案名稱，會變成 https://<name>.<你的子網域>.workers.dev
+  "name": "editor-site",
+
+  // 你的 Worker 程式進入點
+  "main": "src/index.js",
+
+  // 設成「建立當天」的日期即可
+  "compatibility_date": "2026-06-15",
+
+  // 靜態前端檔案放這個資料夾。Astro 做好後，把這裡改成 "./dist"
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page",
+    // 讓 /admin 與 /admin.html 先經過 Worker（驗證），不被當靜態檔直接送出
+    "run_worker_first": ["/admin", "/admin.html","/api/*"]
+  },
+
+  // D1 資料庫綁定。執行 `wrangler d1 create editor-site-db` 後，
+  // 把它印出來的 database_id 貼到下面。
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "editor-site-db",
+      "database_id": "3af300a2-90c0-442c-84e5-728c716345c5"
+    }
+  ]
+}
