@@ -340,13 +340,33 @@
   color: var(--muted);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--line);
-  padding: 4px 10px 4px 8px;
-  border-radius: var(--pill);
+  padding: 6px 10px 6px 10px;
+  border-radius: var(--r);
 }
 .cb-follow svg {
   width: 26px;
   height: 26px;
   flex-shrink: 0;
+}
+.cb-follow[data-platform="IG"] {
+  --pc: #e1306c;
+  /* border-color: var(--pc); */
+  color: var(--pc);
+}
+.cb-follow[data-platform="YT"] {
+  --pc: #ff0000;
+  /* border-color: var(--pc); */
+  color: var(--pc);
+}
+.cb-follow[data-platform="FB"] {
+  --pc: #1877f2;
+  /* border-color: var(--pc); */
+  color: var(--pc);
+}
+.cb-follow[data-platform="TikTok"] {
+  --pc: #ff0050;
+  /* border-color: var(--pc); */
+  color: var(--pc);
 }
 .cb-follow em {
   font-style: normal;
@@ -377,7 +397,7 @@
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--line);
   border-left: 3px solid var(--accent);
-  border-radius: var(--r);
+  border-radius: var(--r) none var(--r) var(--r);
   padding: 14px 16px;
 }
 .cb-highlight .h-icon {
@@ -386,21 +406,27 @@
   margin-bottom: 10px;
 }
 .cb-highlight .h-icon svg {
-  width: 20px;
-  height: 20px;
+  width: 30px;
+  height: 30px;
 }
 .cb-highlight .h-title {
   font-weight: 700;
-  font-size: 14px;
-  color: var(--ink);
+  font-size: 18px;
+  color: var(--accent);
   margin-bottom: 6px;
 }
 .cb-highlight .h-desc {
   font-family: var(--fm);
-  font-size: 12px;
+  font-size: 14px;
   color: var(--muted);
   line-height: 1.65;
   margin: 0;
+}
+.cb-highlight .h-desc strong {
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 700;
+  padding: 0 5px;
 }
 .case-block .results {
   display: flex;
@@ -410,6 +436,7 @@
   padding-top: 16px;
   border-top: 1px solid var(--line);
 }
+
 .case-block .results .num {
   font-weight: 900;
   font-size: clamp(22px, 3vw, 30px);
@@ -465,5 +492,22 @@
   }
   .case-block:hover {
     transform: none;
+  }
+}
+
+.js-magnet {
+  font-size: 16px;
+  padding: 14px 28px;
+}
+
+/* rwd */
+@media (max-width: 640px) {
+  .case-block .results {
+    justify-content: center;
+  }
+
+  .js-magnet {
+    width: 100%;
+    text-align: center;
   }
 }

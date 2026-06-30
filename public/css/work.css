@@ -221,3 +221,10 @@
     transform: none;
   }
 }
+
+/* rwd */
+@media (max-width: 640px) {
+  .loadmore {
+    width: 100%;
+  }
+}

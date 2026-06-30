@@ -73,7 +73,8 @@
       renderWork(wall, list);
       if (paginate && shown < currentList.length) {
         lmWrap.style.display = "flex";
-        lmBtn.textContent = "載入更多（ 剩 " + (currentList.length - shown) + " ）";
+        // lmBtn.textContent = "載入更多（ 剩 " + (currentList.length - shown) + " ）";
+        lmBtn.textContent = "載入更多";
       } else {
         lmWrap.style.display = "none";
       }

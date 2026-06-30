@@ -33,6 +33,7 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+  letter-spacing: 1px;
 }
 a {
   color: inherit;
@@ -895,4 +896,10 @@ button[type="submit"]:disabled {
   border: 1px solid var(--line);
   padding: 7px 13px;
   border-radius: var(--pill);
+}
+
+@media (max-width: 640px) {
+  button[type="submit"] {
+    width: 100%;
+  }
 }

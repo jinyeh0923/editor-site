@@ -31,17 +31,17 @@ window.CASES = [
       {
         icon: "talk",
         title: "創造社群話題",
-        desc: "NPC 場館開箱，udn、ETtoday 等多家主流媒體轉發分享。",
+        desc: "NPC 場館開箱，<strong>udn、ETtoday 等多家主流媒體</strong>轉發分享。",
       },
       {
         icon: "target",
         title: "精準定位",
-        desc: "合作執行 2 個月粉絲增長 1 萬+，短影音第 3 支即破百萬觀看。",
+        desc: "合作執行<strong>2個月</strong>粉絲增長<strong>1萬+</strong>，短影音<strong>第3支即破百萬觀看</strong>。",
       },
     ],
     metrics: [
       { label: "粉絲增長", value: "1萬+" },
-      { label: "單支最高", value: "239萬" },
+      { label: "單支最高", value: "291萬" },
       { label: "破百萬支數", value: "3支" },
     ],
     works: ["reel-volleyball-meme", "reel-meme-1", "reel-atl-npc"],
@@ -52,7 +52,7 @@ window.CASES = [
     name: "排球實驗室",
     handle: "@volleyball_lab_1997",
     kind: "運動頻道 · IG Reels + Shorts",
-    tagline: "30 秒學習排球技巧",
+    tagline: "30秒學習排球技巧",
     follows: [
       { platform: "IG", value: "2.6萬" },
       { platform: "TikTok", value: "5K" },
@@ -60,11 +60,11 @@ window.CASES = [
     ],
     summary: "排球賽事精華、戰術分析短片。",
     highlights: [
-      { icon: "growth", title: "快速漲粉", desc: "創立首月粉絲數突破 1 萬+。" },
+      { icon: "growth", title: "快速漲粉", desc: "創立首月粉絲數突破<strong>1萬+</strong>。" },
       {
         icon: "views",
         title: "穩定流量",
-        desc: "短片平均觀看 40 萬～50 萬次。",
+        desc: "短片平均觀看<strong>40萬～50萬次</strong>。",
       },
     ],
     metrics: [
@@ -152,7 +152,9 @@ window.renderCases = function (el, opts) {
           .map(function (f) {
             var icon = PLATFORM_ICONS[f.platform] || f.platform;
             return (
-              '<span class="cb-follow">' +
+              '<span class="cb-follow" data-platform="' +
+              f.platform +
+              '">' +
               icon +
               "<em>" +
               f.value +
