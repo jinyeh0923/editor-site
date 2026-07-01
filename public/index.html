@@ -4,8 +4,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>薯餅 葉書銘 — 社群短影音剪輯・選題企劃・數據複盤 [待客戶確認]</title>
-  <meta name="description" content="葉書銘（薯餅）：社群短影音全流程——選題企劃、腳本節奏、剪輯包裝、上架數據複盤。Shorts、Reels、運動／訪談／品牌短片。[待客戶確認]">
+  <title>薯餅 葉書銘 — 社群短影音剪輯・選題企劃・數據複盤</title>
+  <meta name="description" content="葉書銘（薯餅）：社群短影音全流程——選題企劃、腳本節奏、剪輯包裝、上架數據複盤。Shorts、Reels、運動／訪談／品牌短片。">
   <link rel="canonical" href="https://editor-site.editor-vincent.workers.dev/">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="zh_TW">
@@ -158,7 +158,7 @@
         <div class="tc">02:00 <b>—</b> 精選作品</div>
         <h2>Selected Work</h2>
       </div>
-      <a class="linkmore" href="work.html">看全部作品 →</a>
+      <a class="linkmore" href="work.html">看更多作品 →</a>
     </div>
     <div class="wall" id="wall-teaser" data-cols="5"></div>
   </section>
@@ -170,37 +170,9 @@
         <div class="tc">03:00 <b>—</b> 社群實操案例</div>
         <h2>Case Studies</h2>
       </div>
-      <a class="linkmore" href="cases.html">看完整案例 →</a>
+      <a class="linkmore" href="cases.html">看更多案例 →</a>
     </div>
-    <div class="cases">
-      <article class="case">
-        <div class="media">
-          <div class="ph">案例封面（換成你的圖）</div>
-        </div>
-        <div class="body">
-          <div class="meta">運動頻道 · YouTube + IG</div>
-          <h3>從零起步的運動短影音頻道</h3>
-          <div class="row">
-            <div class="k">挑戰</div>
-            <div class="v">頻道剛起步、沒有穩定的短影音產出節奏。</div>
-          </div>
-          <div class="row">
-            <div class="k">做法</div>
-            <div class="v">建立每週選題與剪輯流程，統一字幕字卡風格。</div>
-          </div>
-          <div class="results">
-            <div>
-              <div class="num"><em>0→5</em>萬</div>
-              <div class="cap">追蹤成長（示意）</div>
-            </div>
-            <div>
-              <div class="num"><em>300</em>萬+</div>
-              <div class="cap">短影音總觀看（示意）</div>
-            </div>
-          </div>
-        </div>
-      </article>
-    </div>
+    <div class="cases-list" id="cases-teaser-root"></div>
   </section>
 
   <!-- services -->
@@ -322,6 +294,8 @@
   <script src="js/works.js"></script>
   <script src="vendors/lenis/lenis.min.js"></script>
   <script src="js/partials.js"></script>
+  <script src="js/cases.js"></script>
+  <script>renderCases(document.getElementById("cases-teaser-root"), { homeOnly: true });</script>
   <script src="js/app.js"></script>
   <script src="js/masonry.js"></script>
   <script>renderWork(document.getElementById("wall-teaser"), WORKS.filter(function (w) { return w.home; }));</script>

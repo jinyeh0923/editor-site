@@ -1,6 +1,7 @@
 /* 社群實操案例資料。
    案例欄位（選填欄位空值或空陣列時不顯示任何 HTML）：
      id       唯一識別碼
+     home     true → 顯示在首頁 Case Studies teaser（與 works.js 的 home 一致，自己挑）
      featured true → case1.html 用強調版式
      logo     logo 圖片路徑（選填）
      name     客戶帳號名稱
@@ -16,6 +17,7 @@
 window.CASES = [
   {
     id: "case-attackline",
+    home: true,
     featured: true,
     logo: "posters/logos/attackline.jpg",
     name: "ATTACKLINE 三米線",
@@ -24,7 +26,7 @@ window.CASES = [
     tagline: "每週分享實用排球技巧",
     follows: [
       { platform: "IG", value: "1.7萬" },
-      { platform: "FB", value: "8K" },
+      { platform: "FB", value: "1.1萬" },
     ],
     summary: "排球教學、迷因、技術挑戰，創造社群話題。",
     highlights: [
@@ -48,19 +50,24 @@ window.CASES = [
   },
   {
     id: "case-vlab",
+    // home: true,
     logo: "posters/logos/vlab.jpg",
     name: "排球實驗室",
     handle: "@volleyball_lab_1997",
     kind: "運動頻道 · IG Reels + Shorts",
     tagline: "30秒學習排球技巧",
     follows: [
-      { platform: "IG", value: "2.6萬" },
+      { platform: "IG", value: "2.4萬" },
       { platform: "TikTok", value: "5K" },
-      { platform: "YT", value: "1K" },
+      { platform: "YT", value: "4.2K" },
     ],
     summary: "排球賽事精華、戰術分析短片。",
     highlights: [
-      { icon: "growth", title: "快速漲粉", desc: "創立首月粉絲數突破<strong>1萬+</strong>。" },
+      {
+        icon: "growth",
+        title: "快速漲粉",
+        desc: "創立首月粉絲數突破<strong>1萬+</strong>。",
+      },
       {
         icon: "views",
         title: "穩定流量",
@@ -75,21 +82,44 @@ window.CASES = [
     works: ["reel-v-lab1", "reel-v-lab3", "reel-v-lab2"],
   },
   {
-    id: "case-tbd",
-    name: "（待定）",
-    kind: "訪談節目 · YouTube Shorts",
-    tagline: "",
-    follows: [],
-    summary: "內容待補。",
-    highlights: [],
-    metrics: [],
-    works: [],
+    id: "case-beauty",
+    logo: "posters/logos/beautywiki.jpg",
+    name: "Beautywiki",
+    handle: "@beautywiki_official",
+    kind: "資訊分享 · IG Reels",
+    tagline: "大人向娛樂情報站",
+    follows: [{ platform: "IG", value: "6.2萬" }],
+    summary: "女優新聞、專訪、番號推薦",
+    highlights: [
+      {
+        icon: "growth",
+        title: "製作大量影音",
+        desc: "客製化需求，穩定供片！",
+      },
+      {
+        icon: "saved",
+        title: "短片分享、珍藏率高",
+        desc: "資訊類內容，創造社群互動。",
+      },
+    ],
+    metrics: [
+      { label: "創立首月粉絲", value: "1萬+" },
+      { label: "單支最高", value: "112萬" },
+      { label: "平均觀看", value: "4-5萬" },
+    ],
+    works: ["reel-info", "reel-actress"],
   },
 ];
 
-/* ── opts.featuredFirst: true → 第一個 case.featured 用 case-block--featured 版式 ── */
+/* ── opts.featuredFirst: true → 第一個 case.featured 用 case-block--featured 版式
+      opts.homeOnly: true  → 只渲染標了 home:true 的案例（首頁 teaser 用，與 works.js 的 home 一致） ── */
 window.renderCases = function (el, opts) {
   opts = opts || {};
+  var cases = opts.homeOnly
+    ? window.CASES.filter(function (c) {
+        return c.home;
+      })
+    : window.CASES;
 
   /* 平台 icon（fill="currentColor"，沿用 partials.js 的 ig/yt SVG） */
   var PLATFORM_ICONS = {
@@ -109,153 +139,159 @@ window.renderCases = function (el, opts) {
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>',
     views:
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+    saved:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>',
   };
 
-  var html = window.CASES.map(function (c, i) {
-    var isFeatured = !!(opts.featuredFirst && i === 0 && c.featured);
+  var html = cases
+    .map(function (c, i) {
+      var isFeatured = !!(opts.featuredFirst && i === 0 && c.featured);
 
-    /* 頂部：logo（選填）+ kind + name/handle */
-    var logoHtml = c.logo
-      ? '<img class="cb-logo" src="' +
-        c.logo +
-        '" alt="' +
+      /* 頂部：logo（選填）+ kind + name/handle */
+      var logoHtml = c.logo
+        ? '<img class="cb-logo" src="' +
+          c.logo +
+          '" alt="' +
+          (c.name || "") +
+          ' logo" loading="lazy" onerror="this.style.display=\'none\'">'
+        : "";
+      var topHtml =
+        '<div class="cb-top">' +
+        logoHtml +
+        '<div class="cb-top-info">' +
+        '<div class="cb-meta">' +
+        (c.kind || "") +
+        "</div>" +
+        '<div class="cb-header">' +
+        "<h3>" +
         (c.name || "") +
-        ' logo" loading="lazy" onerror="this.style.display=\'none\'">'
-      : "";
-    var topHtml =
-      '<div class="cb-top">' +
-      logoHtml +
-      '<div class="cb-top-info">' +
-      '<div class="cb-meta">' +
-      (c.kind || "") +
-      "</div>" +
-      '<div class="cb-header">' +
-      "<h3>" +
-      (c.name || "") +
-      "</h3>" +
-      (c.handle ? '<span class="cb-handle">' + c.handle + "</span>" : "") +
-      "</div>" +
-      "</div>" +
-      "</div>";
-
-    /* 定位 slogan */
-    var taglineHtml = c.tagline
-      ? '<p class="cb-tagline">' + c.tagline + "</p>"
-      : "";
-
-    /* 粉絲平台（icon + 數值） */
-    var followsHtml = "";
-    if (c.follows && c.follows.length) {
-      followsHtml =
-        '<div class="cb-follows">' +
-        c.follows
-          .map(function (f) {
-            var icon = PLATFORM_ICONS[f.platform] || f.platform;
-            return (
-              '<span class="cb-follow" data-platform="' +
-              f.platform +
-              '">' +
-              icon +
-              "<em>" +
-              f.value +
-              "</em>" +
-              "</span>"
-            );
-          })
-          .join("") +
+        "</h3>" +
+        (c.handle ? '<span class="cb-handle">' + c.handle + "</span>" : "") +
+        "</div>" +
+        "</div>" +
         "</div>";
-    }
 
-    /* 一句話簡介 */
-    var summaryHtml = c.summary
-      ? '<p class="cb-summary">' + c.summary + "</p>"
-      : "";
+      /* 定位 slogan */
+      var taglineHtml = c.tagline
+        ? '<p class="cb-tagline">' + c.tagline + "</p>"
+        : "";
 
-    /* 亮點卡片（icon + 標題 + 說明） */
-    var highlightsHtml = "";
-    if (c.highlights && c.highlights.length) {
-      highlightsHtml =
-        '<div class="cb-highlights">' +
-        c.highlights
-          .map(function (h) {
-            var icon =
-              h.icon && HIGHLIGHT_ICONS[h.icon]
-                ? '<span class="h-icon">' + HIGHLIGHT_ICONS[h.icon] + "</span>"
-                : "";
-            return (
-              '<div class="cb-highlight">' +
-              icon +
-              '<div class="h-title">' +
-              h.title +
-              "</div>" +
-              '<p class="h-desc">' +
-              h.desc +
-              "</p>" +
-              "</div>"
-            );
-          })
-          .join("") +
-        "</div>";
-    }
-
-    /* 數據條 */
-    var metricsHtml = "";
-    if (c.metrics && c.metrics.length) {
-      metricsHtml =
-        '<div class="results">' +
-        c.metrics
-          .map(function (m) {
-            return (
-              "<div>" +
-              '<div class="num"><em>' +
-              m.value +
-              "</em></div>" +
-              '<div class="cap">' +
-              m.label +
-              "</div>" +
-              "</div>"
-            );
-          })
-          .join("") +
-        "</div>";
-    }
-
-    /* 代表作品 */
-    var worksHtml = "";
-    if (c.works && c.works.length) {
-      var cards = c.works
-        .map(function (id) {
-          var w = window.workById(id);
-          if (!w) {
-            console.warn("[cases.js] 找不到 work id:", id);
-            return "";
-          }
-          return window.workCardHTML(w);
-        })
-        .join("");
-      if (cards) {
-        worksHtml =
-          '<p class="case-works-label">代表作品</p>' +
-          '<div class="case-works">' +
-          cards +
+      /* 粉絲平台（icon + 數值） */
+      var followsHtml = "";
+      if (c.follows && c.follows.length) {
+        followsHtml =
+          '<div class="cb-follows">' +
+          c.follows
+            .map(function (f) {
+              var icon = PLATFORM_ICONS[f.platform] || f.platform;
+              return (
+                '<span class="cb-follow" data-platform="' +
+                f.platform +
+                '">' +
+                icon +
+                "<em>" +
+                f.value +
+                "</em>" +
+                "</span>"
+              );
+            })
+            .join("") +
           "</div>";
       }
-    }
 
-    return (
-      '<article class="case-block' +
-      (isFeatured ? " case-block--featured" : "") +
-      ' reveal">' +
-      topHtml +
-      taglineHtml +
-      followsHtml +
-      summaryHtml +
-      highlightsHtml +
-      metricsHtml +
-      worksHtml +
-      "</article>"
-    );
-  }).join("");
+      /* 一句話簡介 */
+      var summaryHtml = c.summary
+        ? '<p class="cb-summary">' + c.summary + "</p>"
+        : "";
+
+      /* 亮點卡片（icon + 標題 + 說明） */
+      var highlightsHtml = "";
+      if (c.highlights && c.highlights.length) {
+        highlightsHtml =
+          '<div class="cb-highlights">' +
+          c.highlights
+            .map(function (h) {
+              var icon =
+                h.icon && HIGHLIGHT_ICONS[h.icon]
+                  ? '<span class="h-icon">' +
+                    HIGHLIGHT_ICONS[h.icon] +
+                    "</span>"
+                  : "";
+              return (
+                '<div class="cb-highlight">' +
+                icon +
+                '<div class="h-title">' +
+                h.title +
+                "</div>" +
+                '<p class="h-desc">' +
+                h.desc +
+                "</p>" +
+                "</div>"
+              );
+            })
+            .join("") +
+          "</div>";
+      }
+
+      /* 數據條 */
+      var metricsHtml = "";
+      if (c.metrics && c.metrics.length) {
+        metricsHtml =
+          '<div class="results">' +
+          c.metrics
+            .map(function (m) {
+              return (
+                "<div>" +
+                '<div class="num"><em>' +
+                m.value +
+                "</em></div>" +
+                '<div class="cap">' +
+                m.label +
+                "</div>" +
+                "</div>"
+              );
+            })
+            .join("") +
+          "</div>";
+      }
+
+      /* 代表作品 */
+      var worksHtml = "";
+      if (c.works && c.works.length) {
+        var cards = c.works
+          .map(function (id) {
+            var w = window.workById(id);
+            if (!w) {
+              console.warn("[cases.js] 找不到 work id:", id);
+              return "";
+            }
+            return window.workCardHTML(w);
+          })
+          .join("");
+        if (cards) {
+          worksHtml =
+            '<p class="case-works-label">代表作品</p>' +
+            '<div class="case-works">' +
+            cards +
+            "</div>";
+        }
+      }
+
+      return (
+        '<article class="case-block' +
+        (isFeatured ? " case-block--featured" : "") +
+        ' reveal">' +
+        topHtml +
+        taglineHtml +
+        followsHtml +
+        summaryHtml +
+        highlightsHtml +
+        metricsHtml +
+        worksHtml +
+        "</article>"
+      );
+    })
+    .join("");
 
   el.innerHTML = html;
 };

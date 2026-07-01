@@ -495,7 +495,13 @@
   }
 }
 
-.js-magnet {
+.cta_wrap {
+  margin-top: clamp(48px, 7vw, 80px);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.cta_wrap .js-magnet {
   font-size: 16px;
   padding: 14px 28px;
 }

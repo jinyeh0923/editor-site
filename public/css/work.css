@@ -192,7 +192,7 @@
   font-size: 14px;
   color: var(--ink);
   background: transparent;
-  border: 1px solid var(--line);
+  border: 2px solid var(--muted);
   padding: 13px 28px;
   border-radius: var(--pill);
   cursor: pointer;

@@ -78,7 +78,7 @@
   font-family: var(--fm);
   font-size: 14px;
   color: var(--ink);
-  border: 1px solid var(--line);
+  border: 2px solid var(--muted);
   padding: 13px 22px;
   border-radius: var(--pill);
 }
@@ -89,7 +89,9 @@
 
 .reel {
   position: relative;
-  aspect-ratio: 16/9;
+  aspect-ratio: 9/16;
+  width: min(100%, 300px);
+  margin-inline: auto;
   border-radius: var(--r);
   overflow: hidden;
   border: 1px solid var(--line);
