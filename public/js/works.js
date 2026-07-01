@@ -27,17 +27,6 @@ window.WORKS = [
     views: "21.9萬",
     home: true,
   },
-  // 律師
-  {
-    id: "lawyer-deserter",
-    url: "https://www.youtube.com/shorts/IgZ48m34akU",
-    cat: "談話主題",
-    title: "筑鈞律師 - 逃兵案件分析",
-    role: "剪輯·調光",
-    dur: "0:38",
-    views: "68.5萬",
-    home: true,
-  },
   // 日本職業球員 - 粉絲見面會
   {
     id: "volleyball-fanmeet",
@@ -104,6 +93,17 @@ window.WORKS = [
   },
   // 律師
   {
+    id: "lawyer-deserter",
+    url: "https://www.youtube.com/shorts/IgZ48m34akU",
+    cat: "談話主題",
+    title: "筑鈞律師 - 逃兵案件分析",
+    role: "剪輯·調光",
+    dur: "0:38",
+    views: "68.5萬",
+    home: true,
+  },
+  // 律師
+  {
     id: "lawyer-case",
     url: "https://youtu.be/wS2CF9RukmM",
     cat: "談話主題",
@@ -111,6 +111,30 @@ window.WORKS = [
     role: "剪輯·調光",
     dur: "15:03",
     views: "4.6 萬",
+  },
+  // reel 戰術分析 - 賽事剪輯
+  {
+    id: "reel-v-lab1",
+    url: "https://www.instagram.com/reel/CvetsKir7u8/",
+    cat: "資訊分享",
+    title: "戰術分析 - 賽事剪輯",
+    role: "剪輯·字卡",
+    dur: "0:33",
+    poster: "posters/works/reel-6.jpg",
+    views: "2.4百萬",
+    home: true,
+  },
+  // reel 探店主題
+  {
+    id: "reel-pet",
+    url: "https://www.instagram.com/reels/C8KOn3HSup1/",
+    cat: "探店主題",
+    title: "寵物公仔製作",
+    role: "剪輯·字卡",
+    dur: "0:33",
+    poster: "posters/works/reel-7.jpg",
+    views: "1.5百萬",
+    home: true,
   },
   // reel 迷因-慢動作挑戰
   {
@@ -206,30 +230,6 @@ window.WORKS = [
     dur: "0:33",
     poster: "posters/works/reel-5.jpg",
     views: "1.5百萬",
-  },
-  // reel 戰術分析 - 賽事剪輯
-  {
-    id: "reel-v-lab1",
-    url: "https://www.instagram.com/reel/CvetsKir7u8/",
-    cat: "資訊分享",
-    title: "戰術分析 - 賽事剪輯",
-    role: "剪輯·字卡",
-    dur: "0:33",
-    poster: "posters/works/reel-6.jpg",
-    views: "2.4百萬",
-    home: true,
-  },
-  // reel 探店主題
-  {
-    id: "reel-pet",
-    url: "https://www.instagram.com/reels/C8KOn3HSup1/",
-    cat: "探店主題",
-    title: "寵物公仔製作",
-    role: "剪輯·字卡",
-    dur: "0:33",
-    poster: "posters/works/reel-7.jpg",
-    views: "1.5百萬",
-    home: true,
   },
   // reel 探店主題
   {

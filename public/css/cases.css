@@ -511,7 +511,10 @@
   .case-block .results {
     justify-content: center;
   }
-
+  .cb-logo {
+    width: 50px;
+    height: 50px;
+  }
   .js-magnet {
     width: 100%;
     text-align: center;

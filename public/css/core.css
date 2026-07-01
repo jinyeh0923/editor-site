@@ -902,5 +902,6 @@ button[type="submit"]:disabled {
   button[type="submit"],
   .ghost {
     width: 100%;
+    text-align: center;
   }
 }
