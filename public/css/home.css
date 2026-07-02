@@ -163,41 +163,133 @@
   }
 }
 
-/* 經營流程 steps */
+/* 經營流程 — 水平連續時間軸：一線貫穿四節點、文字統一排在線下方、依序點亮（1→4） */
 .flow {
+  --node: 12px;
+  --line-y: 30px; /* 水平線距每欄頂端的高度：線上放時間碼、線下放標題與說明 */
+  --flow-line: color-mix(in srgb, var(--accent) 38%, transparent);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  position: relative;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: clamp(16px, 2vw, 28px);
+  gap: clamp(20px, 3vw, 44px);
+  align-items: start;
 }
-@media (max-width: 860px) {
-  .flow {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-@media (max-width: 520px) {
-  .flow {
-    grid-template-columns: 1fr;
-  }
+/* 貫穿整區的連續水平線（四個節點都落在這條線上） */
+.flow::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--node) / 2);
+  right: calc(var(--node) / 2);
+  top: var(--line-y);
+  height: 2px;
+  background: var(--flow-line);
+  transform-origin: left center;
+  z-index: 0;
+  pointer-events: none;
 }
 .flow .step {
-  border-top: 2px solid var(--accent);
-  padding-top: 18px;
+  position: relative;
+  /* 為線上的時間碼與線本身留白，標題與說明統一排到線的下方 */
+  padding-top: calc(var(--line-y) + var(--node) / 2 + 16px);
 }
-.flow .n {
+/* 節點圓點：等距落在水平線上，與同欄時間碼/標題/說明左緣對齊 */
+.flow .node {
+  position: absolute;
+  top: calc(var(--line-y) - var(--node) / 2);
+  left: 0;
+  z-index: 2;
+  width: var(--node);
+  height: var(--node);
+  border-radius: 50%;
+  background: var(--accent);
+}
+/* 時間碼：緊貼在線的上方 */
+.flow .tcode {
+  position: absolute;
+  top: calc(var(--line-y) - 24px);
+  left: 0;
+  z-index: 1;
   font-family: var(--fm);
   color: var(--accent);
   font-size: 13px;
+  letter-spacing: 0.04em;
 }
+/* 標題 / 說明：統一排在線的下方、同欄左緣對齊（不上下交錯、無階梯） */
 .flow h3 {
-  font-weight: 700;
-  font-size: 19px;
-  margin: 12px 0 8px;
+  position: relative;
+  z-index: 1;
+  margin: 0 0 6px;
+  font-weight: 900;
+  font-size: clamp(17px, 1.4vw, 20px);
+  color: var(--ink);
 }
 .flow p {
+  position: relative;
+  z-index: 1;
   margin: 0;
   color: var(--muted);
   font-size: 15px;
   line-height: 1.55;
+}
+
+/* ── 進場依序點亮（由 #flow.reveal.in 觸發，只跑一次；hook app.js 的 IntersectionObserver）── */
+@keyframes stepIn {
+  from {
+    opacity: 0;
+    transform: translateX(-80px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes lineGrow {
+  from {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+@keyframes lineGrowV {
+  from {
+    opacity: 0;
+    transform: scaleY(0);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+/* 進場前先隱藏（.in 由 app.js 在捲到可視範圍時加上） */
+#flow:not(.in) .flow .step,
+#flow:not(.in) .flow::before {
+  opacity: 0;
+}
+/* 水平線由左至右延展；節點與文字依序淡入；backwards 讓延遲期間維持隱藏、結束後回常態 */
+#flow.in .flow::before {
+  animation: lineGrow 0.7s ease backwards;
+  animation-delay: 0.5s;
+}
+#flow.in .flow .step {
+  animation: stepIn 1s ease backwards;
+}
+#flow.in .flow .step:nth-child(1) {
+  animation-delay: 0.55s;
+}
+#flow.in .flow .step:nth-child(2) {
+  animation-delay: 0.72s;
+}
+#flow.in .flow .step:nth-child(3) {
+  animation-delay: 0.89s;
+}
+#flow.in .flow .step:nth-child(4) {
+  animation-delay: 1.06s;
 }
 
 /* services / numbered */
@@ -276,5 +368,63 @@
   }
   .marq .track {
     animation: none;
+  }
+  /* #flow：關閉依序點亮/水平線展開，直接顯示最終靜態狀態（內容完整可見） */
+  #flow .flow .step,
+  #flow .flow::before {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* ── #flow RWD（斷點 1024 / 640）── */
+/* 平板：維持四欄水平線，縮小欄距與說明字級，避免太擠破版 */
+@media (max-width: 1024px) {
+  .flow {
+    gap: clamp(14px, 2.4vw, 28px);
+  }
+  .flow p {
+    font-size: 14px;
+  }
+}
+/* 手機：改垂直時間軸——線直立在左側、節點由上而下、每節點右側放時間碼+標題+說明、由上往下依序點亮 */
+@media (max-width: 640px) {
+  .flow {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  /* 水平線轉直立、貼齊左側 */
+  .flow::before {
+    left: calc(var(--node) / 2 - 1px);
+    right: auto;
+    top: 4px;
+    bottom: 4px;
+    width: 2px;
+    height: auto;
+    transform-origin: top center;
+  }
+  .flow .step {
+    padding-top: 0;
+    padding-left: calc(var(--node) + 22px);
+    padding-bottom: 30px;
+  }
+  .flow .step:last-child {
+    padding-bottom: 0;
+  }
+  .flow .node {
+    top: 4px;
+    left: 0;
+  }
+  /* 時間碼回到流內、排在標題上方（線右側依序：時間碼→標題→說明） */
+  .flow .tcode {
+    position: static;
+    display: block;
+    margin-bottom: 4px;
+  }
+  /* 直立線改由上往下展開 */
+  #flow.in .flow::before {
+    animation-name: lineGrowV;
   }
 }

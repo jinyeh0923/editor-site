@@ -1,7 +1,22 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:www.youtube.com)"
+      "WebFetch(domain:www.youtube.com)",
+      "WebFetch(domain:www.instagram.com)",
+      "Bash(sed -i -e s/（原.*reel-[A-Za-z0-9-]*）//g -e 's/id: \"reel-/id: \"reels-/g' -e 's/→ reel-/→ reels-/g' -e s/reel-tenga/reels-tenga/g /c/Users/Meow/editor-site/public/js/works.js)",
+      "Bash(sed -i 's/\"reel-/\"reels-/g' \"/c/Users/Meow/editor-site/public/js/cases.js\")",
+      "Bash(echo \"done\")",
+      "Bash(python -c \"import playwright; print\\('playwright', playwright.__version__\\)\")",
+      "Bash(python -c \"from playwright.sync_api import sync_playwright; p=sync_playwright\\(\\).start\\(\\); b=p.chromium.launch\\(headless=True\\); print\\('chromium ok'\\); b.close\\(\\); p.stop\\(\\)\")",
+      "Bash(pip install *)",
+      "Bash(python -m playwright install chromium)",
+      "Bash(python -m http.server 8099 --bind 127.0.0.1)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://127.0.0.1:8099/index.html)",
+      "Bash(python \"C:\\\\Users\\\\Meow\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Meow-editor-site\\\\3006799e-0f32-4a7f-99e5-2ffbc9c590e4\\\\scratchpad\\\\shot_flow.py\")",
+      "Bash(sed -i 's/page.goto\\(URL\\)/page.goto\\(URL, wait_until=\"domcontentloaded\"\\)/; s/page.wait_for_load_state\\(\"networkidle\"\\)/page.wait_for_timeout\\(1200\\)/; s/pg.goto\\(URL\\); pg.wait_for_load_state\\(\"networkidle\"\\); pg.wait_for_timeout\\(400\\)/pg.goto\\(URL, wait_until=\"domcontentloaded\"\\); pg.wait_for_timeout\\(1400\\)/' shot_flow.py)",
+      "Bash(python shot_flow.py)",
+      "Bash(kill %1)",
+      "Bash(pkill -f \"http.server 8099\")"
     ]
   }
 }

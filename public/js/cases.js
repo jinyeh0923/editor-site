@@ -44,9 +44,15 @@ window.CASES = [
     metrics: [
       { label: "粉絲增長", value: "1萬+" },
       { label: "單支最高", value: "291萬" },
-      { label: "破百萬支數", value: "3支" },
+      { label: "破百萬支數", value: "5支+" },
     ],
-    works: ["reel-volleyball-meme", "reel-meme-1", "reel-atl-npc"],
+    works: [
+      "reels-attack-1",
+      "reels-attack-2",
+      "reels-attack-3",
+      "reels-attack-4",
+      "reels-attack-5",
+    ],
   },
   {
     id: "case-vlab",
@@ -71,15 +77,15 @@ window.CASES = [
       {
         icon: "views",
         title: "穩定流量",
-        desc: "短片平均觀看<strong>40萬～50萬次</strong>。",
+        desc: "短片平均觀看<strong>30萬-40萬次</strong>。",
       },
     ],
     metrics: [
       { label: "創立首月粉絲", value: "1萬+" },
       { label: "單支最高", value: "245萬" },
-      { label: "平均觀看", value: "40-50萬" },
+      { label: "平均觀看", value: "30-40萬" },
     ],
-    works: ["reel-v-lab1", "reel-v-lab3", "reel-v-lab2"],
+    works: ["reels-vlab-1", "reels-vlab-3", "reels-vlab-2"],
   },
   {
     id: "case-beauty",
@@ -107,7 +113,7 @@ window.CASES = [
       { label: "單支最高", value: "112萬" },
       { label: "平均觀看", value: "4-5萬" },
     ],
-    works: ["reel-info", "reel-actress"],
+    works: ["reels-beautywiki-1", "reels-beautywiki-2"],
   },
 ];
 
