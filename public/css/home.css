@@ -246,6 +246,16 @@
     transform: translateX(0);
   }
 }
+@keyframes stepIn_mb {
+  from {
+    opacity: 0;
+    transform: translateY(-40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 @keyframes lineGrow {
   from {
     opacity: 0;
@@ -278,6 +288,12 @@
 }
 #flow.in .flow .step {
   animation: stepIn 1s ease backwards;
+}
+
+@media (max-width: 640px) {
+  #flow.in .flow .step {
+    animation: stepIn_mb 1s ease backwards;
+  }
 }
 #flow.in .flow .step:nth-child(1) {
   animation-delay: 0.55s;
