@@ -365,8 +365,9 @@ window.WORKS = [
 
   // ─────────────────────────────────────────────
   // IG · beautywiki_official（Beautywiki）
+  // 此帳號已關閉，三筆連結皆失效 → url 一律留空：卡片會輸出 div 而非 <a>，
+  // 不產生死連結，只保留封面與觀看數供檢視成效。tag 需手動標（判不出平台）。
   // ─────────────────────────────────────────────
-  // 原連結已失效 → url 留空，卡片輸出 div 不可點，只保留封面與觀看數
   {
     id: "reels-beautywiki-1",
     url: "",
@@ -377,7 +378,6 @@ window.WORKS = [
     tag: "Reels", // 無 url 無法自動判平台，手動標
     views: "112.1萬",
   },
-  // 原連結已失效 → 同上
   {
     id: "reels-beautywiki-2",
     url: "",
@@ -390,11 +390,12 @@ window.WORKS = [
   },
   {
     id: "reels-beautywiki-3",
-    url: "https://www.instagram.com/reels/DFumm-sBqdV/",
+    url: "",
     cat: "活動紀錄與日常",
     title: "TENGA 城隍廟",
     dur: "0:33",
     poster: "posters/works/reel-17.jpg",
+    tag: "Reels", // 無 url 無法自動判平台，手動標
     views: "2.6萬",
   },
 

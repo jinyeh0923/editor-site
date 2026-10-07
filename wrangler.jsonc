@@ -5,6 +5,14 @@
   // 你的 Worker 程式進入點
   "main": "src/index.js",
 
+  // 部署目標帳號。不寫的話，有多個 Cloudflare 帳號時：
+  //   互動式終端機 → 跳選單（選錯會在錯的帳號「新建」一個 editor-site，而不是更新現有的）
+  //   非互動式（CI / 自動化 / AI 工具）→ 直接報錯中止
+  // 這不是機密，不能單獨用來驗證身分，進 git 沒問題。
+  // ⚠️ 交接給客戶時要換成客戶帳號的 ID（見 CONTENT-CHECKLIST.md「帳號 / 網域」）
+  //    目前：Lyrayeh0@gmail.com's Account
+  "account_id": "1f506a38135d78297b21c4c80f6b9020",
+
   // 設成「建立當天」的日期即可
   "compatibility_date": "2026-06-15",
 
