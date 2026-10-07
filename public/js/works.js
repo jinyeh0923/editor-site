@@ -5,20 +5,50 @@
      - 其他平台 → 請給 poster。
    欄位說明：
      id     唯一識別碼（給 cases.js 的 works[] 參照用）
-     url    必填，作品連結
-     cat    分類（自動產生作品集頁篩選按鈕）
+     url    必填，作品連結；留空＝不可點擊（卡片改輸出 div，不產生死連結）
+     cat    分類（見下方 WORK_CATS，自動產生作品集頁篩選按鈕）
      title  標題
      dur    長度，手填（YT/IG 都無法用免費方式自動抓，留空就不顯示）
      poster 封面圖路徑，IG/其他必給（例 "posters/works/reel-1.jpg"）；YouTube 可不給
      ratio  選填，"9/16" 或 "16/9"；不填會自動推斷（reel/shorts→9:16、youtube 長片→16:9）
      tag    選填，卡片左上角標籤；不填會依平台自動標（Shorts/Reels/YouTube）
-     pin    選填，true＝固定排在牆面第一張（masonry 會把它提到最前）
-     views  選填，觀看數字串（例 "239萬"、"75.2萬"），無法程式自動抓，從平台手填；留空就不顯示
-   作品超過 16 個時，作品集頁自動改成「載入更多」（一次 12 個）。 */
+     pin    選填，true＝固定排在牆面第一張（masonry 會把它提到每個排列候選最前）
+     views  選填，觀看數字串（單位一律用「萬」，例 "239萬"、"75.2萬"），無法程式自動抓，
+            從平台手填；留空就不顯示
+     home   選填，true＝出現在首頁的精選作品 teaser
+   作品超過 16 個時，作品集頁自動改成「載入更多」（一次 12 個）。
+
+   ── 作品依「頻道／發布帳號」分組排列，id 前綴＝頻道／帳號，方便對照 cases.js 的社群實操案例 ──
+   YouTube（shorts-＝直式 Shorts、yt-＝橫式長片）：
+     TPVL 台灣職業排球大聯盟     → yt-tpvl-*
+     日本職業球員 見面會        → yt-eastpower-*
+     道明排球隊                → yt-daoming-*
+     初日會客室 Cofit          → shorts-cofit-*
+     旅遊瞭望台                → shorts-ts-*
+     台北松仁扶輪社             → yt-rotary-*
+     筑鈞律師                  → shorts-lawyer-* / yt-lawyer-*
+     Go車誌                    → yt-gocar-*
+   Instagram（依發布帳號）：
+     TPVL                                   → reels-tpvl-*
+     atlsanmixian（ATTACKLINE 三米線）      → reels-attack-*
+     volleyball_lab_1997（排球實驗室）        → reels-vlab-*
+     台北伊斯特排球隊                        → reels-east-*
+     tokkicutie_official                    → reels-tokkicutie-*
+     kobotw（樂天Kobo）                      → reels-kobo-*
+     beautywiki_official（Beautywiki）       → reels-beautywiki-*
+     富特士多 Footd_Store                    → reels-footd-*
+     My Japan Tour                          → reels-myjapantour-*
+     tonyyeh080586                          → reels-tony-*
+     筑鈞律師                                → reels-lawyer-*
+     美食家的自學之路                        → reels-foodie-*
+     是姍姍 不是珊珊                         → reels-shanshan-*
+     吃這個好不好                            → reels-eatthis-* */
 window.WORKS = [
-  // TPVL 元年紀實
+  // ─────────────────────────────────────────────
+  // YT · TPVL 台灣職業排球大聯盟
+  // ─────────────────────────────────────────────
   {
-    id: "tpvl-beginning",
+    id: "yt-tpvl-3",
     url: "https://youtu.be/V-dbC-vt16g",
     cat: "賽事紀錄與運動社群經營",
     title: "TPVL 元年紀實 THE BEGINNING",
@@ -26,47 +56,8 @@ window.WORKS = [
     views: "1.4萬",
     pin: true, // 固定排在牆面第一張（見 masonry.js）
   },
-  // 初日 胰島素阻抗
   {
-    id: "cofit-interview",
-    url: "https://www.youtube.com/shorts/SyJSq47zidg",
-    cat: "商業品牌短影音",
-    title: "初日會客室Cofit",
-    dur: "1:23",
-    views: "21.9萬",
-    home: true,
-  },
-  // 律師
-  {
-    id: "lawyer-deserter",
-    url: "https://www.youtube.com/shorts/IgZ48m34akU",
-    cat: "個人 IP 影音製作",
-    title: "筑鈞律師 - 逃兵案件分析",
-    dur: "0:38",
-    views: "68.5萬",
-    home: true,
-  },
-  // 日本職業球員 - 粉絲見面會
-  {
-    id: "volleyball-fanmeet",
-    url: "https://youtu.be/okUNlGans7Q",
-    cat: "賽事紀錄與運動社群經營",
-    title: "日本職業球員 - 粉絲見面會",
-    dur: "2:46",
-    views: "2044",
-  },
-  // 旅遊瞭望台
-  {
-    id: "travel-lookout",
-    url: "https://www.youtube.com/shorts/LWtX8NwveMA",
-    cat: "商業品牌短影音",
-    title: "旅遊瞭望台",
-    dur: "0:58",
-    views: "1628",
-  },
-  // TPVL - 元年熱身賽（台日交流）
-  {
-    id: "tpvl-warmup",
+    id: "yt-tpvl-1",
     url: "https://youtu.be/xFJDLayVvbs",
     cat: "賽事紀錄與運動社群經營",
     title: "TPVL - 元年熱身賽（台日交流）",
@@ -74,179 +65,95 @@ window.WORKS = [
     views: "1.2萬",
     home: true,
   },
-  // TPVL - 桃園主場開箱
   {
-    id: "tpvl-taoyuan",
+    id: "yt-tpvl-2",
     url: "https://youtu.be/WzsdOpVRD7g",
     cat: "賽事紀錄與運動社群經營",
     title: "TPVL - 桃園主場開箱",
     dur: "3:44",
     views: "1749",
   },
-  // reel 教學-網紅合作
+
+  // ─────────────────────────────────────────────
+  // IG · TPVL 台灣職業排球大聯盟
+  // ─────────────────────────────────────────────
   {
-    id: "reel-edu-1",
+    id: "reels-tpvl-1",
+    url: "https://www.instagram.com/reel/DZHnA2ahTol/",
+    cat: "賽事紀錄與運動社群經營",
+    title: "TPVL 職排聯賽｜賽事高光與年度紀錄片",
+    poster: "posters/works/reel-26.jpg",
+    views: "6.6萬",
+  },
+  {
+    id: "reels-tpvl-2",
+    url: "https://www.instagram.com/reel/DZHYTyQx7vV/",
+    cat: "賽事紀錄與運動社群經營",
+    title: "TPVL 職排聯賽｜賽事高光與年度紀錄片",
+    poster: "posters/works/reel-27.jpg",
+    views: "16.8萬",
+  },
+  {
+    id: "reels-tpvl-3",
+    url: "https://www.instagram.com/reel/DO2d0t7EW8B/",
+    cat: "賽事紀錄與運動社群經營",
+    title: "TPVL 職排聯賽｜賽事高光與年度紀錄片",
+    poster: "posters/works/reel-28.jpg",
+    views: "22.8萬",
+  },
+
+  // ─────────────────────────────────────────────
+  // IG · atlsanmixian（ATTACKLINE 三米線）
+  // ─────────────────────────────────────────────
+  {
+    id: "reels-attack-1",
     url: "https://www.instagram.com/reels/DCRJu0_yPYv/",
     cat: "賽事紀錄與運動社群經營",
     title: "網紅合作",
     dur: "0:48",
     poster: "posters/works/reel-1.jpg",
-    views: "150萬",
+    views: "154.3萬",
   },
-  // reel 教學-網紅合作
   {
-    id: "reel-edu-2",
+    id: "reels-attack-2",
     url: "https://www.instagram.com/reel/DG2geERTsik/",
     cat: "賽事紀錄與運動社群經營",
     title: "網紅合作",
     dur: "0:55",
     poster: "posters/works/reel-2.jpg",
-    views: "230萬",
+    views: "232.7萬",
     home: true,
   },
-  // 律師
   {
-    id: "lawyer-case",
-    url: "https://youtu.be/wS2CF9RukmM",
-    cat: "個人 IP 影音製作",
-    title: "筑鈞律師 - 法律案件分析",
-    dur: "15:03",
-    views: "4.6萬",
-  },
-  // reel 迷因-慢動作挑戰
-  {
-    id: "reel-meme-1",
+    id: "reels-attack-3",
     url: "https://www.instagram.com/reels/DGAlT_UTpyb/",
     cat: "賽事紀錄與運動社群經營",
     title: "慢動作挑戰",
     dur: "0:44",
     poster: "posters/works/reel-3.jpg",
-    views: "200萬",
+    views: "205.9萬",
     home: true,
   },
-  // reel 迷因挑戰 - 排球技巧
   {
-    id: "reel-volleyball-meme",
+    id: "reels-attack-4",
     url: "https://www.instagram.com/reel/DClu_ZQSp55/",
     cat: "賽事紀錄與運動社群經營",
     title: "排球技巧",
     dur: "0:29",
     poster: "posters/works/reel-4.jpg",
-    views: "290萬",
+    views: "291.9萬",
   },
-  // 律師 雙人採訪
   {
-    id: "lawyer-duo",
-    url: "https://youtu.be/vBPgKX1M4QQ",
-    cat: "個人 IP 影音製作",
-    title: "雙人棚內訪談",
-    dur: "25:39",
-    views: "2.3萬",
-  },
-  // 道明排球隊 - 謝師宴回顧
-  {
-    id: "daoming-volleyball",
-    url: "https://youtu.be/1xXXi1T0VBk",
-    cat: "賽事紀錄與運動社群經營",
-    title: "道明排球隊 - 謝師宴回顧",
-    dur: "9:07",
-    views: "140",
-  },
-  // 律師
-  {
-    id: "lawyer-legal",
-    url: "https://youtu.be/aAbyGuubSd4",
-    cat: "個人 IP 影音製作",
-    title: "筑鈞律師 - 法律解析",
-    dur: "15:15",
-    views: "4.6萬",
-  },
-  // reel 教學 - 技巧示範
-  {
-    id: "reel-skill",
+    id: "reels-attack-5",
     url: "https://www.instagram.com/reels/C_c5VhPBnGL/",
     cat: "賽事紀錄與運動社群經營",
     title: "技巧示範",
     dur: "0:33",
     poster: "posters/works/reel-5.jpg",
-    views: "150萬",
+    views: "159.3萬",
   },
-  // reel 戰術分析 - 賽事剪輯
   {
-    id: "reel-v-lab1",
-    url: "https://www.instagram.com/reel/CvetsKir7u8/",
-    cat: "賽事紀錄與運動社群經營",
-    title: "戰術分析 - 賽事剪輯",
-    dur: "0:33",
-    poster: "posters/works/reel-6.jpg",
-    views: "240萬",
-    home: true,
-  },
-  // reel 探店主題
-  {
-    id: "reel-pet",
-    url: "https://www.instagram.com/reels/C8KOn3HSup1/",
-    cat: "活動紀錄與日常",
-    title: "寵物公仔製作",
-    dur: "0:33",
-    poster: "posters/works/reel-7.jpg",
-    views: "150萬",
-    home: true,
-  },
-  // reel 探店主題
-  {
-    id: "reel-bookfair",
-    url: "https://www.instagram.com/reels/DUcGtGQEuKr/",
-    cat: "商業品牌短影音",
-    title: "書展攤位導覽",
-    dur: "0:33",
-    poster: "posters/works/reel-8.jpg",
-    views: "1.9萬",
-  },
-  // reel Vlog
-  {
-    id: "reel-dog-1",
-    url: "https://www.instagram.com/reel/C7ynRE5SIIH/",
-    cat: "活動紀錄與日常",
-    title: "狗狗紀錄",
-    dur: "0:33",
-    poster: "posters/works/reel-9.jpg",
-    views: "12.1萬",
-  },
-  // reel Vlog
-  {
-    id: "reel-dog-2",
-    url: "https://www.instagram.com/reel/C7g120OyGB9/",
-    cat: "活動紀錄與日常",
-    title: "狗狗生活紀錄",
-    dur: "0:33",
-    poster: "posters/works/reel-10.jpg",
-    views: "32.1萬",
-  },
-  // reel Vlog
-  {
-    id: "reel-ebook-travel",
-    url: "https://www.instagram.com/reel/DMCNOwFzMgS/",
-    cat: "商業品牌短影音",
-    title: "帶著電子書去旅遊",
-    dur: "0:33",
-    poster: "posters/works/reel-11.jpg",
-    views: "9308",
-  },
-  // reel Vlog
-  {
-    id: "reel-kobo",
-    url: "https://www.instagram.com/reel/DTFwl4qkuwe/",
-    cat: "商業品牌短影音",
-    title: "樂天Kobo 電子書",
-    dur: "0:33",
-    poster: "posters/works/reel-12.jpg",
-    views: "1.2萬",
-    home: true,
-  },
-  // reel 人物專訪
-  {
-    id: "reel-dis",
+    id: "reels-attack-6",
     url: "https://www.instagram.com/reels/DKZeBAYTzCN/",
     cat: "賽事紀錄與運動社群經營",
     title: "DIS球隊專訪",
@@ -255,50 +162,8 @@ window.WORKS = [
     views: "5.1萬",
     home: true,
   },
-  // reel 訪談
   {
-    id: "reel-kobo-author",
-    url: "https://www.instagram.com/reels/DMfkqSdzybM/",
-    cat: "商業品牌短影音",
-    title: "Kobo電子書 - 作者專訪",
-    dur: "0:33",
-    poster: "posters/works/reel-14.jpg",
-    views: "1.4萬",
-  },
-  // reel 資訊分享（Beautywiki 帳號已關閉 → 無 url，卡片只顯示封面與觀看數、不可點擊）
-  {
-    id: "reel-info",
-    url: "",
-    cat: "商業品牌短影音",
-    title: "番號即將揭曉｜優質推薦：小笠原祐子",
-    dur: "0:33",
-    poster: "posters/works/reel-15.jpg",
-    tag: "Reels", // 無 url 無法自動判平台，手動標
-    views: "110萬",
-  },
-  // reel 採訪
-  {
-    id: "reel-actress",
-    url: "https://www.instagram.com/reel/C0bqRnXB_3J/",
-    cat: "商業品牌短影音",
-    title: "女優採訪",
-    dur: "0:33",
-    poster: "posters/works/reel-16.jpg",
-    views: "52.6萬",
-  },
-  // reel 活動
-  {
-    id: "reel-tenga",
-    url: "https://www.instagram.com/reels/DFumm-sBqdV/",
-    cat: "活動紀錄與日常",
-    title: "TENGA 城隍廟",
-    dur: "0:33",
-    poster: "posters/works/reel-17.jpg",
-    views: "2.6萬",
-  },
-  // reel 活動
-  {
-    id: "reel-atl",
+    id: "reels-attack-7",
     url: "https://www.instagram.com/reel/DL7MmcTzrXw/",
     cat: "賽事紀錄與運動社群經營",
     title: "ATL 代表隊甄選",
@@ -306,9 +171,8 @@ window.WORKS = [
     poster: "posters/works/reel-18.jpg",
     views: "5.8萬",
   },
-  // reel 活動
   {
-    id: "reel-kids",
+    id: "reels-attack-8",
     url: "https://www.instagram.com/reels/DIi08wZTWW0/",
     cat: "賽事紀錄與運動社群經營",
     title: "親子活動",
@@ -316,19 +180,8 @@ window.WORKS = [
     poster: "posters/works/reel-19.jpg",
     views: "1.2萬",
   },
-  // reel 活動
   {
-    id: "reel-presser",
-    url: "https://www.instagram.com/reels/DMFXU9TBF4o/",
-    cat: "活動紀錄與日常",
-    title: "球隊記者會 花絮",
-    dur: "0:33",
-    poster: "posters/works/reel-20.jpg",
-    views: "1.6萬",
-  },
-  // reel 活動
-  {
-    id: "reel-volleyball-event",
+    id: "reels-attack-9",
     url: "https://www.instagram.com/reels/DKMRipVT9Xf/",
     cat: "賽事紀錄與運動社群經營",
     title: "排球賽事 紀錄",
@@ -336,9 +189,8 @@ window.WORKS = [
     poster: "posters/works/reel-21.jpg",
     views: "2.2萬",
   },
-  // reel 探店主題
   {
-    id: "reel-atl-npc",
+    id: "reels-attack-10",
     url: "https://www.instagram.com/reel/DBtConoyaFO/",
     cat: "活動紀錄與日常",
     title: "ATL - NPC入場",
@@ -346,213 +198,399 @@ window.WORKS = [
     poster: "posters/works/reel-22.jpg",
     views: "90.2萬",
   },
-  // reel 教學
   {
-    id: "reel-defense",
-    url: "https://www.instagram.com/reels/DA5l6omy_Gt/",
+    id: "reels-attack-11",
+    url: "https://www.instagram.com/reel/DA5l6omy_Gt/",
     cat: "賽事紀錄與運動社群經營",
-    title: "排球防守技巧 TIP 3｜前撲滑行緩衝",
+    title: "防守技巧",
     dur: "0:33",
     poster: "posters/works/reel-23.jpg",
-    views: "120萬",
+    views: "129.7萬",
   },
-  // reel 教學
+
+  // ─────────────────────────────────────────────
+  // IG · volleyball_lab_1997（排球實驗室）
+  // ─────────────────────────────────────────────
   {
-    id: "reel-v-lab2",
+    id: "reels-vlab-1",
+    url: "https://www.instagram.com/reel/CvetsKir7u8/",
+    cat: "賽事紀錄與運動社群經營",
+    title: "戰術分析 - 賽事剪輯",
+    dur: "0:33",
+    poster: "posters/works/reel-6.jpg",
+    views: "245.8萬",
+    home: true,
+  },
+  {
+    id: "reels-vlab-2",
     url: "https://www.instagram.com/reel/Cz8XLNuSruS/",
     cat: "賽事紀錄與運動社群經營",
     title: "舉球",
     dur: "0:33",
     poster: "posters/works/reel-24.jpg",
-    views: "100萬",
+    views: "106.2萬",
   },
-  // reel 教學
   {
-    id: "reel-v-lab3",
+    id: "reels-vlab-3",
     url: "https://www.instagram.com/reel/CzDpr4OSV9Q/",
     cat: "賽事紀錄與運動社群經營",
     title: "舉球戰術",
     dur: "0:33",
     poster: "posters/works/reel-25.jpg",
-    views: "160萬",
+    views: "167.4萬",
   },
 
-  /* ── 以下為待補內容：title / dur / views 留空（卡片會自動不顯示該欄）
-       要上首頁精選的加 home: true ── */
+  // ─────────────────────────────────────────────
+  // YT · 日本職業球員 見面會
+  // ─────────────────────────────────────────────
+  {
+    id: "yt-eastpower-1",
+    url: "https://youtu.be/okUNlGans7Q",
+    cat: "賽事紀錄與運動社群經營",
+    title: "日本職業球員 - 粉絲見面會",
+    dur: "2:46",
+    views: "2044",
+  },
 
-  // reel 運動
+  // ─────────────────────────────────────────────
+  // YT · 道明排球隊
+  // ─────────────────────────────────────────────
   {
-    id: "reel-sport-1",
-    url: "https://www.instagram.com/reel/DZHnA2ahTol/",
+    id: "yt-daoming-1",
+    url: "https://youtu.be/1xXXi1T0VBk",
     cat: "賽事紀錄與運動社群經營",
-    title: "TPVL 職排聯賽｜賽事高光與年度紀錄片",
-    dur: "",
-    poster: "posters/works/reel-26.jpg",
-    views: "6.6萬",
+    title: "道明排球隊 - 謝師宴回顧",
+    dur: "9:07",
+    views: "140",
   },
-  // reel 運動
+
+  // ─────────────────────────────────────────────
+  // IG · 台北伊斯特排球隊
+  // ─────────────────────────────────────────────
   {
-    id: "reel-sport-2",
-    url: "https://www.instagram.com/reel/DZHYTyQx7vV/",
-    cat: "賽事紀錄與運動社群經營",
-    title: "TPVL 職排聯賽｜賽事高光與年度紀錄片",
-    dur: "",
-    poster: "posters/works/reel-27.jpg",
-    views: "16.8萬",
+    id: "reels-east-1",
+    url: "https://www.instagram.com/reel/DPGOhinj4Yt/",
+    cat: "活動紀錄與日常",
+    title: "台北伊斯特排球隊",
+    poster: "posters/works/reel-38.jpg",
+    views: "3.5萬",
   },
-  // reel 運動
+
+  // ─────────────────────────────────────────────
+  // IG · tokkicutie_official
+  // ─────────────────────────────────────────────
   {
-    id: "reel-sport-3",
-    url: "https://www.instagram.com/reel/DO2d0t7EW8B/",
-    cat: "賽事紀錄與運動社群經營",
-    title: "TPVL 職排聯賽｜賽事高光與年度紀錄片",
-    dur: "",
-    poster: "posters/works/reel-28.jpg",
-    views: "22.8萬",
+    id: "reels-tokkicutie-1",
+    url: "https://www.instagram.com/reels/DMFXU9TBF4o/",
+    cat: "活動紀錄與日常",
+    title: "球隊記者會 花絮",
+    dur: "0:33",
+    poster: "posters/works/reel-20.jpg",
+    views: "1.6萬",
   },
-  // reel Vlog
+
+  // ─────────────────────────────────────────────
+  // YT · 初日會客室 Cofit
+  // ─────────────────────────────────────────────
   {
-    id: "reel-vlog-1",
+    id: "shorts-cofit-1",
+    url: "https://www.youtube.com/shorts/SyJSq47zidg",
+    cat: "商業品牌短影音",
+    title: "初日會客室Cofit",
+    dur: "1:23",
+    views: "21.9萬",
+    home: true,
+  },
+
+  // ─────────────────────────────────────────────
+  // YT · 旅遊瞭望台
+  // ─────────────────────────────────────────────
+  {
+    id: "shorts-ts-1",
+    url: "https://www.youtube.com/shorts/LWtX8NwveMA",
+    cat: "商業品牌短影音",
+    title: "旅遊瞭望台",
+    dur: "0:58",
+    views: "1628",
+  },
+
+  // ─────────────────────────────────────────────
+  // IG · kobotw（樂天Kobo）
+  // ─────────────────────────────────────────────
+  {
+    id: "reels-kobo-1",
+    url: "https://www.instagram.com/reels/DUcGtGQEuKr/",
+    cat: "商業品牌短影音",
+    title: "書展攤位導覽",
+    dur: "0:33",
+    poster: "posters/works/reel-8.jpg",
+    views: "1.9萬",
+  },
+  {
+    id: "reels-kobo-2",
+    url: "https://www.instagram.com/reel/DMCNOwFzMgS/",
+    cat: "商業品牌短影音",
+    title: "帶著電子書去旅遊",
+    dur: "0:33",
+    poster: "posters/works/reel-11.jpg",
+    views: "9308",
+  },
+  {
+    id: "reels-kobo-3",
+    url: "https://www.instagram.com/reel/DTFwl4qkuwe/",
+    cat: "商業品牌短影音",
+    title: "樂天Kobo 電子書",
+    dur: "0:33",
+    poster: "posters/works/reel-12.jpg",
+    views: "1.2萬",
+    home: true,
+  },
+  {
+    id: "reels-kobo-4",
+    url: "https://www.instagram.com/reels/DMfkqSdzybM/",
+    cat: "商業品牌短影音",
+    title: "Kobo電子書 - 作者專訪",
+    dur: "0:33",
+    poster: "posters/works/reel-14.jpg",
+    views: "1.4萬",
+  },
+  {
+    id: "reels-kobo-5",
     url: "https://www.instagram.com/reel/Ddq39QsyO_7/",
     cat: "商業品牌短影音",
     title: "樂天 Kobo 閱讀器｜產品情境短影音",
-    dur: "",
     poster: "posters/works/reel-29.jpg",
     views: "1.7萬",
   },
-  // reel 業配短影音
+
+  // ─────────────────────────────────────────────
+  // IG · beautywiki_official（Beautywiki）
+  // ─────────────────────────────────────────────
   {
-    id: "reel-ad-1",
-    url: "https://www.instagram.com/reel/DVis8ZZkRuT/",
-    cat: "個人 IP 影音製作",
-    title: "筑鈞律師｜個人 IP 社群長短影音製作",
-    dur: "",
-    poster: "posters/works/reel-30.jpg",
-    views: "6.7萬",
+    id: "reels-beautywiki-1",
+    url: "https://www.instagram.com/reel/DGndpT3BgEa/",
+    cat: "商業品牌短影音",
+    title: "番號",
+    dur: "0:33",
+    poster: "posters/works/reel-15.jpg",
+    views: "112.1萬",
   },
-  // reel 業配短影音
   {
-    id: "reel-ad-2",
-    url: "https://www.instagram.com/reel/Dc3Muq6jXFt/",
-    cat: "個人 IP 影音製作",
-    title: "美食家的自學之路｜社群短影音製作",
-    dur: "",
-    poster: "posters/works/reel-31.jpg",
-    views: "33.3萬",
+    id: "reels-beautywiki-2",
+    url: "https://www.instagram.com/reel/C0bqRnXB_3J/",
+    cat: "商業品牌短影音",
+    title: "女優採訪",
+    dur: "0:33",
+    poster: "posters/works/reel-16.jpg",
+    views: "52.6萬",
   },
-  // reel 業配短影音
   {
-    id: "reel-ad-3",
-    url: "https://www.instagram.com/reel/DaVDVmThdIs/",
-    cat: "個人 IP 影音製作",
-    title: "是姍姍 不是珊珊｜社群短影音製作",
-    dur: "",
-    poster: "posters/works/reel-32.jpg",
-    views: "4萬",
+    id: "reels-beautywiki-3",
+    url: "https://www.instagram.com/reels/DFumm-sBqdV/",
+    cat: "活動紀錄與日常",
+    title: "TENGA 城隍廟",
+    dur: "0:33",
+    poster: "posters/works/reel-17.jpg",
+    views: "2.6萬",
   },
-  // reel 業配短影音
+
+  // ─────────────────────────────────────────────
+  // IG · 富特士多 Footd_Store
+  // ─────────────────────────────────────────────
   {
-    id: "reel-ad-4",
+    id: "reels-footd-1",
     url: "https://www.instagram.com/reel/DaxdsqLvb0g/",
     cat: "商業品牌短影音",
     title: "富特士多Footd_Store｜產品店鋪形象短片",
-    dur: "",
     poster: "posters/works/reel-33.jpg",
     views: "8995",
   },
-  // reel 業配短影音
   {
-    id: "reel-ad-5",
+    id: "reels-footd-2",
     url: "https://www.instagram.com/reel/DZZAEy4RRTr/",
     cat: "商業品牌短影音",
     title: "富特士多Footd_Store｜產品店鋪形象短片",
-    dur: "",
     poster: "posters/works/reel-34.jpg",
     views: "5551",
   },
-  // reel 風景
+
+  // ─────────────────────────────────────────────
+  // IG · My Japan Tour
+  // ─────────────────────────────────────────────
   {
-    id: "reel-scenic-1",
+    id: "reels-myjapantour-1",
     url: "https://www.instagram.com/reel/Dbx_yMvtXoB/",
     cat: "商業品牌短影音",
     title: "My Japan Tour｜沉浸觀光短影音",
-    dur: "",
     poster: "posters/works/reel-35.jpg",
     views: "551",
   },
-  // reel 風景
   {
-    id: "reel-scenic-2",
+    id: "reels-myjapantour-2",
     url: "https://www.instagram.com/reel/DccstdMPCBQ/",
     cat: "商業品牌短影音",
     title: "My Japan Tour｜沉浸觀光短影音",
-    dur: "",
     poster: "posters/works/reel-36.jpg",
     views: "457",
   },
-  // reel 風景
   {
-    id: "reel-scenic-3",
+    id: "reels-myjapantour-3",
     url: "https://www.instagram.com/reel/DahczZQAlAi/",
     cat: "商業品牌短影音",
     title: "My Japan Tour｜沉浸觀光短影音",
-    dur: "",
     poster: "posters/works/reel-37.jpg",
     views: "317",
   },
 
-  // 台北松仁扶輪社
+  // ─────────────────────────────────────────────
+  // IG · tonyyeh080586
+  // ─────────────────────────────────────────────
   {
-    id: "rotary-songren-1",
+    id: "reels-tony-1",
+    url: "https://www.instagram.com/reels/C8KOn3HSup1/",
+    cat: "活動紀錄與日常",
+    title: "寵物公仔製作",
+    dur: "0:33",
+    poster: "posters/works/reel-7.jpg",
+    views: "145.5萬",
+    home: true,
+  },
+  {
+    id: "reels-tony-2",
+    url: "https://www.instagram.com/reel/C7ynRE5SIIH/",
+    cat: "活動紀錄與日常",
+    title: "狗狗紀錄",
+    dur: "0:33",
+    poster: "posters/works/reel-9.jpg",
+    views: "12.1萬",
+  },
+  {
+    id: "reels-tony-3",
+    url: "https://www.instagram.com/reel/C7g120OyGB9/",
+    cat: "活動紀錄與日常",
+    title: "狗狗生活紀錄",
+    dur: "0:33",
+    poster: "posters/works/reel-10.jpg",
+    views: "32.1萬",
+  },
+
+  // ─────────────────────────────────────────────
+  // YT · 台北松仁扶輪社
+  // ─────────────────────────────────────────────
+  {
+    id: "yt-rotary-1",
     url: "https://youtu.be/cBnoYXcRUvs",
     cat: "活動紀錄與日常",
     title: "台北松仁扶輪社",
-    dur: "",
-    views: "",
   },
-  // 台北松仁扶輪社
   {
-    id: "rotary-songren-2",
+    id: "yt-rotary-2",
     url: "https://youtu.be/fdtmavRzKVg",
     cat: "活動紀錄與日常",
     title: "台北松仁扶輪社",
-    dur: "",
-    views: "",
   },
-  // reel 台北伊斯特排球隊
+
+  // ─────────────────────────────────────────────
+  // YT · 筑鈞律師（Shorts）
+  // ─────────────────────────────────────────────
   {
-    id: "reel-east",
-    url: "https://www.instagram.com/reel/DPGOhinj4Yt/",
-    cat: "活動紀錄與日常",
-    title: "台北伊斯特排球隊",
-    dur: "",
-    poster: "posters/works/reel-38.jpg",
-    views: "3.5萬",
+    id: "shorts-lawyer-1",
+    url: "https://www.youtube.com/shorts/IgZ48m34akU",
+    cat: "個人 IP 影音製作",
+    title: "筑鈞律師 - 逃兵案件分析",
+    dur: "0:38",
+    views: "68.5萬",
+    home: true,
   },
-  // 筑鈞律師
   {
-    id: "lawyer-shorts",
+    id: "shorts-lawyer-2",
     url: "https://www.youtube.com/shorts/679511BdHnA",
     cat: "個人 IP 影音製作",
     title: "筑鈞律師",
-    dur: "",
     views: "1114",
   },
-  // reel 吃這個好不好
+
+  // ─────────────────────────────────────────────
+  // YT · 筑鈞律師（長片）
+  // ─────────────────────────────────────────────
   {
-    id: "reel-food",
+    id: "yt-lawyer-1",
+    url: "https://youtu.be/wS2CF9RukmM",
+    cat: "個人 IP 影音製作",
+    title: "筑鈞律師 - 法律案件分析",
+    dur: "15:03",
+    views: "4.6萬",
+  },
+  {
+    id: "yt-lawyer-2",
+    url: "https://youtu.be/vBPgKX1M4QQ",
+    cat: "個人 IP 影音製作",
+    title: "雙人棚內訪談",
+    dur: "25:39",
+    views: "2.3萬",
+  },
+  {
+    id: "yt-lawyer-3",
+    url: "https://youtu.be/aAbyGuubSd4",
+    cat: "個人 IP 影音製作",
+    title: "筑鈞律師 - 法律解析",
+    dur: "15:15",
+    views: "4.6萬",
+  },
+
+  // ─────────────────────────────────────────────
+  // IG · 筑鈞律師
+  // ─────────────────────────────────────────────
+  {
+    id: "reels-lawyer-1",
+    url: "https://www.instagram.com/reel/DVis8ZZkRuT/",
+    cat: "個人 IP 影音製作",
+    title: "筑鈞律師｜個人 IP 社群長短影音製作",
+    poster: "posters/works/reel-30.jpg",
+    views: "6.7萬",
+  },
+
+  // ─────────────────────────────────────────────
+  // IG · 美食家的自學之路
+  // ─────────────────────────────────────────────
+  {
+    id: "reels-foodie-1",
+    url: "https://www.instagram.com/reel/Dc3Muq6jXFt/",
+    cat: "個人 IP 影音製作",
+    title: "美食家的自學之路｜社群短影音製作",
+    poster: "posters/works/reel-31.jpg",
+    views: "33.3萬",
+  },
+
+  // ─────────────────────────────────────────────
+  // IG · 是姍姍 不是珊珊
+  // ─────────────────────────────────────────────
+  {
+    id: "reels-shanshan-1",
+    url: "https://www.instagram.com/reel/DaVDVmThdIs/",
+    cat: "個人 IP 影音製作",
+    title: "是姍姍 不是珊珊｜社群短影音製作",
+    poster: "posters/works/reel-32.jpg",
+    views: "4萬",
+  },
+
+  // ─────────────────────────────────────────────
+  // IG · 吃這個好不好
+  // ─────────────────────────────────────────────
+  {
+    id: "reels-eatthis-1",
     url: "https://www.instagram.com/reel/DWWmO-lAGBe/",
     cat: "個人 IP 影音製作",
     title: "吃這個好不好",
-    dur: "",
     poster: "posters/works/reel-39.jpg",
     views: "15.4萬",
   },
 
-  /* ── 汽車（Go車誌）固定排在最後 ── */
-  // Go車誌 - 車主訪談
+  // ─────────────────────────────────────────────
+  // YT · Go車誌（固定排在最後）
+  // ─────────────────────────────────────────────
   {
-    id: "gocar-interview",
+    id: "yt-gocar-1",
     url: "https://youtu.be/4a_o4VAYATc&t=53s",
     cat: "個人 IP 影音製作",
     title: "Go車誌 - 車主訪談",
@@ -560,18 +598,16 @@ window.WORKS = [
     views: "26萬",
     home: true,
   },
-  // Go車誌 - 新車試駕
   {
-    id: "gocar-testdrive",
+    id: "yt-gocar-2",
     url: "https://youtu.be/Ei_MBgnKHy8",
     cat: "個人 IP 影音製作",
     title: "Go車誌 - 新車試駕",
     dur: "14:10",
     views: "7.9萬",
   },
-  // Go車誌 - 車用品開箱
   {
-    id: "gocar-unbox",
+    id: "yt-gocar-3",
     url: "https://youtu.be/ZmOGYXnYh-k",
     cat: "個人 IP 影音製作",
     title: "Go車誌 - 車用品開箱",
