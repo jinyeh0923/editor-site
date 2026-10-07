@@ -366,22 +366,26 @@ window.WORKS = [
   // ─────────────────────────────────────────────
   // IG · beautywiki_official（Beautywiki）
   // ─────────────────────────────────────────────
+  // 原連結已失效 → url 留空，卡片輸出 div 不可點，只保留封面與觀看數
   {
     id: "reels-beautywiki-1",
-    url: "https://www.instagram.com/reel/DGndpT3BgEa/",
+    url: "",
     cat: "商業品牌短影音",
     title: "番號",
     dur: "0:33",
     poster: "posters/works/reel-15.jpg",
+    tag: "Reels", // 無 url 無法自動判平台，手動標
     views: "112.1萬",
   },
+  // 原連結已失效 → 同上
   {
     id: "reels-beautywiki-2",
-    url: "https://www.instagram.com/reel/C0bqRnXB_3J/",
+    url: "",
     cat: "商業品牌短影音",
     title: "女優採訪",
     dur: "0:33",
     poster: "posters/works/reel-16.jpg",
+    tag: "Reels", // 無 url 無法自動判平台，手動標
     views: "52.6萬",
   },
   {
