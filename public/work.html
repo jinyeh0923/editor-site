@@ -62,9 +62,13 @@
     var INITIAL = 12, STEP = 12, THRESHOLD = 16; // 清單超過 16 個才分批，一次 12 個
     var currentList = WORKS, shown = INITIAL;
 
-    var cats = ["全部"].concat([...new Set(WORKS.map(function (w) { return w.cat; }))]);
-    filterBar.innerHTML = cats.map(function (c, i) {
-      return '<button type="button" data-cat="' + c + '" aria-pressed="' + (i === 0) + '">' + c + '</button>';
+    // 先照 works.js 的 WORK_CATS 排，沒列到的照 WORKS 出現順序補在後面，「全部」放最末
+    var present = [...new Set(WORKS.map(function (w) { return w.cat; }))];
+    var ordered = (window.WORK_CATS || []).filter(function (c) { return present.indexOf(c) > -1; });
+    var cats = ordered.concat(present.filter(function (c) { return ordered.indexOf(c) < 0; }), ["全部"]);
+    var DEFAULT_CAT = cats[0]; // 預設選第一個分類，不是「全部」
+    filterBar.innerHTML = cats.map(function (c) {
+      return '<button type="button" data-cat="' + c + '" aria-pressed="' + (c === DEFAULT_CAT) + '">' + c + '</button>';
     }).join("");
 
     function paint() {
@@ -93,7 +97,7 @@
     });
     lmBtn.addEventListener("click", function () { shown += STEP; paint(); });
 
-    apply("全部");
+    apply(DEFAULT_CAT);
   </script>
 </body>
 

@@ -110,19 +110,6 @@
   border-radius: var(--pill);
   text-transform: uppercase;
 }
-.w .cat-tag {
-  position: absolute;
-  top: 9px;
-  right: 9px;
-  font-family: var(--fm);
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  /* color: var(--on-accent); */
-  /* background: var(--accent); */
-  background: rgba(11, 11, 13, 0.78);
-  padding: 3px 7px;
-  border-radius: var(--pill);
-}
 .w .dur {
   position: absolute;
   left: 9px;

@@ -98,6 +98,15 @@
       alt,                         // 高矮交替（不重複）
     ];
 
+    // 有 data-pin 的卡要固定在牆面第一張（左上）。simulate 一定先放陣列第一張，
+    // 所以把它提到每個候選排列的最前面，不管哪個候選勝出都會排第一。
+    var pinned = cards.filter(function (c) { return c.hasAttribute("data-pin"); });
+    if (pinned.length) {
+      candidates = candidates.map(function (order) {
+        return pinned.concat(order.filter(function (c) { return pinned.indexOf(c) < 0; }));
+      });
+    }
+
     var best = null;
     candidates.forEach(function (order) {
       var result = simulate(order, cols, g);
