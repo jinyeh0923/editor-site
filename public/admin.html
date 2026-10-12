@@ -119,16 +119,41 @@
       margin: 0 0 10px
     }
 
+    /* 新增 / 編輯作品的跳窗（原生 dialog：自帶 Esc 關閉與焦點鎖定） */
+    .wdialog {
+      width: min(760px, calc(100vw - 32px));
+      max-height: calc(100dvh - 48px);
+      padding: 0;
+      overflow: auto;
+      color-scheme: dark; /* 捲軸跟著深色，不要出現白色捲軸 */
+      color: var(--ink);
+      background: var(--bg-2);
+      border: 1px solid var(--line);
+      border-radius: var(--r)
+    }
+
+    .wdialog::backdrop {
+      background: rgba(0, 0, 0, .62);
+      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(6px)
+    }
+
+    /* 跳窗開著時鎖住背景捲動 */
+    html:has(.wdialog[open]) {
+      overflow: hidden
+    }
+
     /* 作品表單（core.css 的 form 是單欄 560px，這裡放寬成兩欄） */
     .wform {
       max-width: none;
       grid-template-columns: 1fr 1fr;
       gap: 16px 20px;
-      padding: 22px;
-      margin-bottom: 20px;
-      border: 1px solid var(--line);
-      border-radius: var(--r);
-      background: var(--bg-2)
+      padding: 24px
+    }
+
+    .wform .note {
+      margin: 0;
+      min-height: 0
     }
 
     /* core.css 的 form / label 是 display:grid，會蓋掉 hidden 屬性 */
@@ -436,7 +461,8 @@
     <p class="hint">排序：拖拉左邊的把手，或直接改編號後按 Enter，也可以用 ↑↓。編號 1 排在網站最前面。改完後前台最多 1 分鐘內更新。</p>
     <p class="note" id="w-note" role="status" aria-live="polite"></p>
 
-    <form class="wform" id="w-form" hidden novalidate>
+    <dialog class="wdialog" id="w-dialog" aria-labelledby="w-form-title">
+    <form class="wform" id="w-form" novalidate>
       <h2 id="w-form-title">新增作品</h2>
       <label class="wide">作品連結
         <input name="url" type="text" inputmode="url" autocomplete="off" maxlength="300"
@@ -482,8 +508,10 @@
       <div class="form-actions">
         <button type="submit" id="w-save">儲存</button>
         <button type="button" class="abtn" id="w-cancel">取消</button>
+        <p class="note bad" id="w-form-note" role="alert"></p>
       </div>
     </form>
+    </dialog>
     <datalist id="w-cats"></datalist>
 
     <div class="tablewrap">
@@ -573,6 +601,8 @@
     var wCount = document.getElementById("w-count");
     var wNote = document.getElementById("w-note");
     var wForm = document.getElementById("w-form");
+    var wDialog = document.getElementById("w-dialog");
+    var wFormNote = document.getElementById("w-form-note");
     var wFormTitle = document.getElementById("w-form-title");
     var wIdField = document.getElementById("w-id-field");
     var wCats = document.getElementById("w-cats");
@@ -601,13 +631,14 @@
       });
     }
     // 送出期間鎖住所有操作，避免連點造成順序錯亂
-    function run(promise, okText) {
+    // onError：錯誤要顯示在別處時用（跳窗開著時，頁面上的訊息會被擋住）
+    function run(promise, okText, onError) {
       if (busy) return;
       busy = true;
       document.body.style.cursor = "progress";
       return promise
         .then(function (r) { if (okText) note(okText); return r; })
-        .catch(function (err) { note(err.message, true); })
+        .catch(function (err) { if (onError) onError(err); else note(err.message, true); })
         .then(function () { busy = false; document.body.style.cursor = ""; });
     }
 
@@ -866,14 +897,21 @@
       f.id.value = "";
       f.visible.checked = w ? !!w.visible : true;
       f.home.checked = w ? !!w.home : false;
-      wForm.hidden = false;
+      wFormNote.textContent = "";
       note("");
-      wForm.scrollIntoView({ block: "start" });
-      f.url.focus({ preventScroll: true });
+      if (!wDialog.open) wDialog.showModal();
+      wDialog.scrollTop = 0;
+      f.url.focus();
     }
     function closeForm() {
-      wForm.hidden = true;
-      editingId = null;
+      if (wDialog.open) wDialog.close();
+    }
+    // 按鈕、Esc、存檔成功都會走到 close 事件
+    wDialog.addEventListener("close", function () { editingId = null; });
+    // 跳窗開著時，錯誤顯示在跳窗裡；已經關了（例如存檔成功但重新讀取失敗）就顯示在頁面上
+    function formError(err) {
+      if (wDialog.open) wFormNote.textContent = err.message;
+      else note(err.message, true);
     }
     wForm.addEventListener("submit", function (e) {
       e.preventDefault();
@@ -882,7 +920,8 @@
       ["url", "cat", "title", "dur", "views", "poster", "ratio", "tag"].forEach(function (k) {
         data[k] = f[k].value.trim();
       });
-      if (!data.cat) { note("請填分類", true); f.cat.focus(); return; }
+      if (!data.cat) { wFormNote.textContent = "請填分類"; f.cat.focus(); return; }
+      wFormNote.textContent = "";
       var req;
       if (editingId) {
         req = api("PUT", "/api/admin/works/" + encodeURIComponent(editingId), data);
@@ -896,7 +935,8 @@
           closeForm();
           return fetchWorks().then(function () { return saved; });
         }),
-        wasEdit ? "已儲存" : "已新增，排在最前面"
+        wasEdit ? "已儲存" : "已新增，排在最前面",
+        formError
       );
     });
     document.getElementById("w-cancel").addEventListener("click", closeForm);
