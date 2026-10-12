@@ -113,6 +113,12 @@
       color: #ff6b6b
     }
 
+    .hint {
+      font-size: 13px;
+      color: var(--muted);
+      margin: 0 0 10px
+    }
+
     /* 作品表單（core.css 的 form 是單欄 560px，這裡放寬成兩欄） */
     .wform {
       max-width: none;
@@ -210,6 +216,60 @@
 
     #w-rows .abtn {
       padding: 6px 12px
+    }
+
+    /* 排序：拖拉把手 + 可直接改的編號 + ↑↓ */
+    #w-rows .order-in {
+      display: flex;
+      align-items: center;
+      gap: 6px
+    }
+
+    #w-rows .grip {
+      display: grid;
+      place-items: center;
+      width: 26px;
+      height: 34px;
+      color: var(--muted-2);
+      cursor: grab
+    }
+
+    #w-rows .grip:hover {
+      color: var(--accent)
+    }
+
+    #w-rows .grip svg {
+      width: 14px;
+      height: 20px
+    }
+
+    #w-rows .pos {
+      width: 58px;
+      padding: 7px 4px;
+      font-family: var(--fm);
+      font-size: 14px;
+      text-align: center;
+      background: var(--bg);
+      -moz-appearance: textfield;
+      appearance: textfield
+    }
+
+    #w-rows .pos::-webkit-outer-spin-button,
+    #w-rows .pos::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0
+    }
+
+    #w-rows tr.dragging td {
+      opacity: .35
+    }
+
+    #w-rows tr.drop-before td {
+      box-shadow: inset 0 3px 0 var(--accent)
+    }
+
+    #w-rows tr.drop-after td {
+      box-shadow: inset 0 -3px 0 var(--accent)
     }
 
     #w-rows .thumb {
@@ -373,6 +433,7 @@
         <button id="w-refresh" type="button">重新整理</button>
       </div>
     </div>
+    <p class="hint">排序：拖拉左邊的把手，或直接改編號後按 Enter，也可以用 ↑↓。編號 1 排在網站最前面。改完後前台最多 1 分鐘內更新。</p>
     <p class="note" id="w-note" role="status" aria-live="polite"></p>
 
     <form class="wform" id="w-form" hidden novalidate>
@@ -518,6 +579,8 @@
     var works = [];
     var editingId = null; // null＝新增
     var busy = false;
+    var dragId = null; // 正在拖的作品 id
+    var GRIP_SVG = '<svg viewBox="0 0 14 20" fill="currentColor" aria-hidden="true"><circle cx="4" cy="4" r="1.6"/><circle cx="10" cy="4" r="1.6"/><circle cx="4" cy="10" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="4" cy="16" r="1.6"/><circle cx="10" cy="16" r="1.6"/></svg>';
 
     function note(text, bad) {
       wNote.textContent = text || "";
@@ -578,14 +641,74 @@
 
         var tdOrder = document.createElement("td");
         tdOrder.className = "order";
-        var up = btn("↑", "上移：" + name, function () { move(w.id, "up"); });
-        var down = btn("↓", "下移：" + name, function () { move(w.id, "down"); });
+        var orderIn = document.createElement("div");
+        orderIn.className = "order-in";
+        tdOrder.appendChild(orderIn);
+        // 拖拉把手：只有把手可拖（整列可拖會妨礙選取文字、點連結），拖的時候顯示整列的影像
+        var grip = document.createElement("span");
+        grip.className = "grip";
+        grip.title = "拖拉排序";
+        grip.draggable = true;
+        grip.innerHTML = GRIP_SVG;
+        grip.addEventListener("dragstart", function (e) {
+          if (busy) { e.preventDefault(); return; }
+          dragId = w.id;
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", w.id);
+          e.dataTransfer.setDragImage(tr, 20, tr.offsetHeight / 2);
+          // 晚一格再變淡，否則拖曳影像也會跟著變淡
+          setTimeout(function () { tr.classList.add("dragging"); }, 0);
+        });
+        grip.addEventListener("dragend", function () {
+          dragId = null;
+          dragY = null;
+          clearDropMarks();
+          tr.classList.remove("dragging");
+        });
+        orderIn.appendChild(grip);
+        // 編號＝目前位置（1 開始）；直接改數字就移到那個位置
+        var pos = document.createElement("input");
+        pos.className = "pos";
+        pos.type = "number";
+        pos.min = 1;
+        pos.max = works.length;
+        pos.value = i + 1;
+        pos.setAttribute("aria-label", "編號：" + name);
+        pos.addEventListener("change", function () {
+          var n = Math.round(Number(pos.value));
+          if (!n) { pos.value = i + 1; return; }
+          moveTo(w.id, Math.max(1, Math.min(works.length, n)) - 1);
+        });
+        pos.addEventListener("keydown", function (e) { if (e.key === "Enter") pos.blur(); });
+        orderIn.appendChild(pos);
+        var up = btn("↑", "上移：" + name, function () { moveTo(w.id, i - 1); });
+        var down = btn("↓", "下移：" + name, function () { moveTo(w.id, i + 1); });
         up.disabled = i === 0;
         down.disabled = i === works.length - 1;
-        tdOrder.appendChild(up);
-        tdOrder.appendChild(document.createTextNode(" "));
-        tdOrder.appendChild(down);
+        orderIn.appendChild(up);
+        orderIn.appendChild(down);
         tr.appendChild(tdOrder);
+
+        tr.setAttribute("data-id", w.id);
+        tr.addEventListener("dragover", function (e) {
+          if (!dragId || dragId === w.id) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+          var r = tr.getBoundingClientRect();
+          var after = e.clientY > r.top + r.height / 2;
+          clearDropMarks();
+          tr.classList.add(after ? "drop-after" : "drop-before");
+        });
+        tr.addEventListener("drop", function (e) {
+          if (!dragId || dragId === w.id) return;
+          e.preventDefault();
+          var r = tr.getBoundingClientRect();
+          var after = e.clientY > r.top + r.height / 2;
+          var from = indexOfWork(dragId);
+          var to = i + (after ? 1 : 0);
+          if (from < to) to--; // 先抽走拖的那筆，後面的位置會往前一格
+          moveTo(dragId, to);
+        });
 
         var tdThumb = document.createElement("td");
         var src = thumbSrc(w);
@@ -674,8 +797,47 @@
       });
     }
 
-    function move(id, dir) {
-      run(api("POST", "/api/admin/works/reorder", { id: id, dir: dir }).then(fetchWorks));
+    function indexOfWork(id) {
+      for (var k = 0; k < works.length; k++) if (works[k].id === id) return k;
+      return -1;
+    }
+    // 拖到視窗上下邊緣時自動捲動（瀏覽器原生拖放在這個版面不會自己捲，滾輪在拖曳中也沒作用）。
+    // 越靠近邊緣捲越快；dragover 會持續觸發，所以停在邊緣不動也會一直捲。
+    var dragY = null, scrollRaf = 0;
+    function autoScroll() {
+      scrollRaf = 0;
+      if (dragId === null || dragY === null) return;
+      var edge = 110, max = 26, d = 0;
+      if (dragY < edge) d = -max * (1 - Math.max(dragY, 0) / edge);
+      else if (dragY > innerHeight - edge) d = max * (1 - Math.max(innerHeight - dragY, 0) / edge);
+      if (d) window.scrollBy(0, d);
+      scrollRaf = requestAnimationFrame(autoScroll);
+    }
+    document.addEventListener("dragover", function (e) {
+      if (dragId === null) return;
+      dragY = e.clientY;
+      if (!scrollRaf) scrollRaf = requestAnimationFrame(autoScroll);
+    });
+
+    function clearDropMarks() {
+      wRows.querySelectorAll(".drop-before, .drop-after").forEach(function (el) {
+        el.classList.remove("drop-before", "drop-after");
+      });
+    }
+    // 把一筆移到第 to 個位置（0 開始）。畫面先更新，再把整份順序送給伺服器；
+    // 失敗就重新抓一次，回到伺服器上的實際順序。
+    function moveTo(id, to) {
+      var from = indexOfWork(id);
+      if (busy || from < 0 || to < 0 || to >= works.length || to === from) { renderWorks(); return; }
+      var item = works.splice(from, 1)[0];
+      works.splice(to, 0, item);
+      renderWorks();
+      var ids = works.map(function (w) { return w.id; });
+      var failed = false;
+      run(
+        api("POST", "/api/admin/works/reorder", { ids: ids }).catch(function (err) { failed = true; throw err; }),
+        "已移到第 " + (to + 1) + " 個：" + (item.title || item.id)
+      ).then(function () { if (failed) fetchWorks().catch(function () {}); });
     }
     function toggle(w) {
       run(

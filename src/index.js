@@ -240,10 +240,13 @@ async function caseRefs(request, env) {
   return refs.length ? refs : null;
 }
 
-// ↑↓：與相鄰那筆交換 sort_order（相鄰＝後台列表的順序，含已下架的）
+// 排序，兩種用法：
+//   { ids: [...] }       拖拉 / 指定編號：送整份順序，sort_order 重編成 1..N
+//   { id, dir: "up"|"down" }  ↑↓：與相鄰那筆交換 sort_order（相鄰＝後台列表的順序，含已下架的）
 async function reorderWork(request, env) {
-  const body = await readJson(request);
+  const body = await readJson(request, 256 * 1024); // 整份 id 清單，作品多時會超過預設上限
   if (body.error) return json({ error: body.error }, body.status);
+  if (body.data.ids !== undefined) return reorderAll(env, body.data.ids);
   const id = String(body.data.id || "");
   const dir = body.data.dir;
   if (dir !== "up" && dir !== "down") return json({ error: "dir 必須是 up 或 down" }, 400);
@@ -266,6 +269,29 @@ async function reorderWork(request, env) {
     env.DB.prepare(set).bind(cur.sort_order, now, other.id),
   ]);
   return json({ ok: true, moved: true, swapped_with: other.id });
+}
+
+// ids 必須剛好是目前全部作品（不多不少、不重複）。對不上代表後台列表是舊的
+// （例如另一個分頁剛新增或刪除過），回 409 讓前端重新整理，不要用舊清單蓋掉順序。
+async function reorderAll(env, ids) {
+  if (!Array.isArray(ids) || ids.some((x) => typeof x !== "string")) {
+    return json({ error: "ids 必須是作品 id 的陣列" }, 400);
+  }
+  const { results } = await env.DB.prepare("SELECT id, sort_order FROM works").all();
+  const current = new Map(results.map((r) => [r.id, r.sort_order]));
+  const stale = ids.length !== current.size || new Set(ids).size !== ids.length || ids.some((x) => !current.has(x));
+  if (stale) return json({ error: "作品清單已經變動，請重新整理後再排序" }, 409);
+
+  // 只更新位置真的有變的；batch＝同一個交易
+  const now = new Date().toISOString();
+  const stmts = [];
+  ids.forEach((id, i) => {
+    if (current.get(id) !== i + 1) {
+      stmts.push(env.DB.prepare("UPDATE works SET sort_order = ?, updated_at = ? WHERE id = ?").bind(i + 1, now, id));
+    }
+  });
+  if (stmts.length) await env.DB.batch(stmts);
+  return json({ ok: true, changed: stmts.length });
 }
 
 // 把送來的欄位疊在現有資料（新增時為空物件）上再整筆驗證
@@ -343,12 +369,12 @@ function json(data, status = 200) {
 }
 // 後台寫入一律收 JSON。要求 Content-Type 是 application/json：
 // 跨站表單送不出這個型別（會先被 CORS preflight 擋下），順便防 CSRF。
-async function readJson(request) {
+async function readJson(request, maxBytes = 16 * 1024) {
   if (!(request.headers.get("content-type") || "").toLowerCase().startsWith("application/json")) {
     return { error: "Content-Type 必須是 application/json", status: 415 };
   }
   const len = Number(request.headers.get("content-length") || 0);
-  if (len > 16 * 1024) return { error: "payload too large", status: 413 };
+  if (len > maxBytes) return { error: "payload too large", status: 413 };
   let data;
   try { data = await request.json(); }
   catch { return { error: "JSON 格式錯誤", status: 400 }; }
