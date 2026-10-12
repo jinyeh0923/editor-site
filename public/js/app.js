@@ -44,14 +44,17 @@
   document.querySelectorAll("#headline .word").forEach(function(w,i){ w.style.animationDelay = (.15+i*.12)+"s"; });
 
   // 進場揭露 + 磁吸
-  if(!reduce){
-    var io = new IntersectionObserver(function(es){
-      es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add("in"); io.unobserve(e.target); } });
-    }, {threshold:.12});
-    document.querySelectorAll(".reveal").forEach(function(el){ io.observe(el); });
-  } else {
-    document.querySelectorAll(".reveal").forEach(function(el){ el.classList.add("in"); });
-  }
+  // revealIn(root)：把 root 底下的 .reveal 接上進場動畫。
+  // 資料載入後才渲染的區塊（作品、案例）要自己呼叫一次，見 works.js 的 renderWhenLoaded。
+  var io = reduce ? null : new IntersectionObserver(function(es){
+    es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add("in"); io.unobserve(e.target); } });
+  }, {threshold:.12});
+  window.revealIn = function(root){
+    root.querySelectorAll(".reveal:not(.in)").forEach(function(el){
+      if(io) io.observe(el); else el.classList.add("in");
+    });
+  };
+  window.revealIn(document);
 
   // showreel
   var reel = document.getElementById("reel");

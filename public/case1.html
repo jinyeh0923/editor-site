@@ -53,7 +53,15 @@
   <script src="vendors/lenis/lenis.min.js"></script>
   <script src="js/partials.js"></script>
   <script src="js/cases.js"></script>
-  <script>renderCases(document.getElementById("cases-root"), { featuredFirst: true });</script>
+  <script>
+    // 案例的代表作要用 workById 查作品 → 等作品載入後再渲染；作品讀取失敗時案例照樣顯示，只是沒有代表作
+    (function () {
+      var root = document.getElementById("cases-root");
+      renderWhenLoaded(root, loadWorks().catch(function () { return []; }), function () {
+        renderCases(root, { featuredFirst: true });
+      });
+    })();
+  </script>
   <script src="js/app.js"></script>
 </body>
 

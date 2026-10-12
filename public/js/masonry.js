@@ -8,14 +8,22 @@
     return Math.max(12, Math.min(18, innerWidth * 0.014));
   }
 
-  // 純模擬：不碰 DOM，只回傳 {placements, heights}
-  function simulate(cards, cols, g) {
+  // 一次最多往後看幾張卡來補洞。客戶在後台自己排順序，所以不能像以前全域挑卡
+  // （會把順序整個打亂）；只在接下來這幾張裡挑，視覺順序與後台順序最多差幾格。
+  var LOOKAHEAD = 3;
+
+  // 依 DOM 順序放卡：每一步在接下來 LOOKAHEAD 張裡，挑能放在最高位置的那張（同高取順序在前的）。
+  // 排最前面的那張最多被跳過 LOOKAHEAD-1 次，之後強制放，避免寬卡一直被往後擠。
+  // 純計算，不碰 DOM，回傳 {placements, heights}
+  function place(cards, cols, g) {
     var heights = new Array(cols).fill(0);
     var remaining = cards.slice();
     var placements = [];
+    var skipped = 0; // remaining[0] 已經被跳過幾次
     while (remaining.length) {
+      var win = skipped >= LOOKAHEAD - 1 ? 1 : Math.min(LOOKAHEAD, remaining.length);
       var pick = 0, pickTop = Infinity, pickCol = 0;
-      for (var k = 0; k < remaining.length; k++) {
+      for (var k = 0; k < win; k++) {
         var sp = +remaining[k].dataset.span, c, top;
         if (sp === 1) {
           c = 0;
@@ -32,6 +40,7 @@
         }
         if (top < pickTop - 0.5) { pickTop = top; pick = k; pickCol = c; }
       }
+      skipped = pick === 0 ? 0 : skipped + 1;
       var card = remaining.splice(pick, 1)[0];
       var sp2 = +card.dataset.span, h = card.offsetHeight;
       placements.push({ card: card, col: pickCol, top: pickTop });
@@ -42,26 +51,12 @@
     return { placements: placements, heights: heights };
   }
 
-  // 分數 = 最高欄 − 最矮欄，越小越平衡
-  function balance(heights) {
-    return Math.max.apply(null, heights) - Math.min.apply(null, heights);
-  }
-
-  // 交錯合併兩個陣列 [a0,b0,a1,b1,...]
-  function interleave(a, b) {
-    var out = [], i = 0, j = 0;
-    while (i < a.length || j < b.length) {
-      if (i < a.length) out.push(a[i++]);
-      if (j < b.length) out.push(b[j++]);
-    }
-    return out;
-  }
-
   function layout(wall) {
     var cards = [].slice.call(wall.children).filter(function (el) {
       return el.classList.contains("w") && getComputedStyle(el).display !== "none";
     });
-    if (!cards.length) { wall.style.height = "0px"; return; }
+    // 沒有卡片（資料還沒到、讀取失敗的訊息、空清單）→ 交還一般排版，讓訊息文字看得到
+    if (!cards.length) { wall.style.height = ""; wall.style.visibility = "visible"; return; }
 
     var cols = colCount(wall), g = gapPx();
     var colW = (wall.clientWidth - g * (cols - 1)) / cols;
@@ -74,49 +69,10 @@
       card.dataset.span = span;
     });
 
-    // pass 2：準備多種排列候選，選分數最好的
-    var narrow = cards.filter(function (c) { return +c.dataset.span === 1; });
-    var wide   = cards.filter(function (c) { return +c.dataset.span !== 1; });
-    var asc    = cards.slice().sort(function (a, b) { return a.offsetHeight - b.offsetHeight; });
-    var desc   = cards.slice().sort(function (a, b) { return b.offsetHeight - a.offsetHeight; });
-    // 高矮交替（不重複）：最高、最矮、次高、次矮…
-    var alt = (function () {
-      var s = desc.slice(), out = [], lo = s.length - 1, hi = 0;
-      while (hi <= lo) {
-        out.push(s[hi++]);
-        if (hi <= lo) out.push(s[lo--]);
-      }
-      return out;
-    })();
+    // pass 2：照順序放卡（有限往前看補洞）
+    var best = place(cards, cols, g);
 
-    var candidates = [
-      cards,                       // 原始順序
-      interleave(wide, narrow),    // 寬卡先
-      interleave(narrow, wide),    // 窄卡先
-      asc,                         // 矮卡先
-      desc,                        // 高卡先
-      alt,                         // 高矮交替（不重複）
-    ];
-
-    // 有 data-pin 的卡要固定在牆面第一張（左上）。simulate 一定先放陣列第一張，
-    // 所以把它提到每個候選排列的最前面，不管哪個候選勝出都會排第一。
-    var pinned = cards.filter(function (c) { return c.hasAttribute("data-pin"); });
-    if (pinned.length) {
-      candidates = candidates.map(function (order) {
-        return pinned.concat(order.filter(function (c) { return pinned.indexOf(c) < 0; }));
-      });
-    }
-
-    var best = null;
-    candidates.forEach(function (order) {
-      var result = simulate(order, cols, g);
-      var s = balance(result.heights);
-      if (!best || s < best.score) {
-        best = { score: s, placements: result.placements, heights: result.heights };
-      }
-    });
-
-    // 套用最佳排列
+    // 套用排列
     best.placements.forEach(function (p) {
       p.card.style.left = p.col * (colW + g) + "px";
       p.card.style.top = p.top + "px";

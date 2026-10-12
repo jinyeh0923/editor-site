@@ -60,16 +60,7 @@
     var lmBtn = document.getElementById("loadmore");
 
     var INITIAL = 12, STEP = 12, THRESHOLD = 16; // 清單超過 16 個才分批，一次 12 個
-    var currentList = WORKS, shown = INITIAL;
-
-    // 先照 works.js 的 WORK_CATS 排，沒列到的照 WORKS 出現順序補在後面，「全部」放最末
-    var present = [...new Set(WORKS.map(function (w) { return w.cat; }))];
-    var ordered = (window.WORK_CATS || []).filter(function (c) { return present.indexOf(c) > -1; });
-    var cats = ordered.concat(present.filter(function (c) { return ordered.indexOf(c) < 0; }), ["全部"]);
-    var DEFAULT_CAT = cats[0]; // 預設選第一個分類，不是「全部」
-    filterBar.innerHTML = cats.map(function (c) {
-      return '<button type="button" data-cat="' + c + '" aria-pressed="' + (c === DEFAULT_CAT) + '">' + c + '</button>';
-    }).join("");
+    var currentList = [], shown = INITIAL;
 
     function paint() {
       var paginate = currentList.length > THRESHOLD;
@@ -97,7 +88,18 @@
     });
     lmBtn.addEventListener("click", function () { shown += STEP; paint(); });
 
-    apply(DEFAULT_CAT);
+    // 作品從 /api/works 載入後才建立篩選按鈕與牆面；失敗或沒有作品時只在牆面顯示訊息
+    renderWhenLoaded(wall, loadWorks(), function () {
+      // 先照 works.js 的 WORK_CATS 排，沒列到的照 WORKS 出現順序補在後面，「全部」放最末
+      var present = [...new Set(WORKS.map(function (w) { return w.cat; }))];
+      var ordered = (window.WORK_CATS || []).filter(function (c) { return present.indexOf(c) > -1; });
+      var cats = ordered.concat(present.filter(function (c) { return ordered.indexOf(c) < 0; }), ["全部"]);
+      var DEFAULT_CAT = cats[0]; // 預設選第一個分類，不是「全部」
+      filterBar.innerHTML = cats.map(function (c) {
+        return '<button type="button" data-cat="' + escHTML(c) + '" aria-pressed="' + (c === DEFAULT_CAT) + '">' + escHTML(c) + '</button>';
+      }).join("");
+      apply(DEFAULT_CAT);
+    }, { emptyText: "目前沒有作品。", errorText: "作品暫時無法載入，請稍後重新整理。" });
   </script>
 </body>
 

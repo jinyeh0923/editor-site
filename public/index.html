@@ -299,10 +299,25 @@
   <script src="vendors/lenis/lenis.min.js"></script>
   <script src="js/partials.js"></script>
   <script src="js/cases.js"></script>
-  <script>renderCases(document.getElementById("cases-teaser-root"), { homeOnly: true });</script>
+  <script>
+    // 案例的代表作要用 workById 查作品 → 等作品載入後再渲染；作品讀取失敗時案例照樣顯示，只是沒有代表作
+    (function () {
+      var root = document.getElementById("cases-teaser-root");
+      renderWhenLoaded(root, loadWorks().catch(function () { return []; }), function () {
+        renderCases(root, { homeOnly: true });
+      });
+    })();
+  </script>
   <script src="js/app.js"></script>
   <script src="js/masonry.js"></script>
-  <script>renderWork(document.getElementById("wall-teaser"), WORKS.filter(function (w) { return w.home; }));</script>
+  <script>
+    (function () {
+      var wall = document.getElementById("wall-teaser");
+      renderWhenLoaded(wall, loadWorks(), function (list) {
+        renderWork(wall, list.filter(function (w) { return w.home; }));
+      }, { errorText: "作品暫時無法載入，請稍後重新整理。" });
+    })();
+  </script>
 </body>
 
 </html>

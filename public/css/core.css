@@ -418,6 +418,16 @@ footer {
   transform: none;
 }
 
+/* 資料讀取失敗 / 沒有資料時的訊息（works.js 的 renderWhenLoaded） */
+.data-msg {
+  font-family: var(--fm);
+  font-size: 14px;
+  color: var(--muted);
+  text-align: center;
+  padding: 48px 16px;
+  column-span: all;
+}
+
 /* ── 關於剪輯者（index）── */
 .aboutme {
   display: grid;
