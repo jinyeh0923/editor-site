@@ -4,10 +4,10 @@
 
 ## 必填
 
-### 作品（js/works.js 的 WORKS）
+### 作品（在 `/admin` 後台的「作品」頁管理，不是改檔案）
 
 - [ ] 每筆換真實 `url`（YouTube 或 Instagram reel 連結）
-- [ ] IG 作品：放 `poster:"posters/檔名.jpg"`（截 Reel 封面 9:16）—IG 無法自動抓縮圖
+- [ ] IG 作品：在後台表單按「上傳圖片」放封面（截 Reel 封面 9:16）—IG 無法自動抓縮圖
 - [ ] 每筆 `dur`（長度）手填；`cat`/`title`/`role` 確認
 - [ ] 移除範例筆數、補真實作品（>16 筆自動啟用載入更多）
 
@@ -15,7 +15,7 @@
 
 - [ ] 本人照片（首頁「關於剪輯者」，4:5 直式）
 - [ ] 案例封面（cases/case1，9:16）
-- [ ] IG 作品封面（對應 works.js 的 poster）
+- [ ] IG 作品封面（改在後台上傳，不用放進 `posters/`）
 
 ### 聯絡資訊（js/partials.js 最上面）
 

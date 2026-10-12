@@ -1,6 +1,6 @@
 # HANDOVER — 接續開發說明
 
-> 最後更新：2026-10-12
+> 最後更新：2026-10-13
 > 這份是「下次開工前先看」的狀態紀錄。架構與程式慣例看 `CLAUDE.md`，上線前的內容清單看 `CONTENT-CHECKLIST.md`，這裡不重複。
 
 ---
@@ -28,61 +28,74 @@ git pull
 
 | | 版本 |
 | --- | --- |
-| 本機 `main` | `2946117` |
-| GitHub `origin/main` | `2946117`（同步） |
-| Cloudflare 線上 | `c144f3c4-32bb-430e-9fd1-ad59cb25e9af` |
-| 開發中分支 `feat/works-admin` | `f96f62c`（已 push，未合併、未部署） |
+| 本機 `main` | 與 `origin/main` 同步（程式最後一版是 `eee7b43`，之後只有文件更新） |
+| Cloudflare 線上 | `1503cd6e-ea30-421f-937b-e13be5aa4035`（＝ `eee7b43` 的程式） |
+| 回復點 | tag `pre-works-admin` → `2946117`（內容後台上線前的最後一版） |
+| 已合併的分支 | `feat/works-admin`、`feat/media-upload`（都已進 `main`，留著沒刪） |
 
 線上網址：https://editor-site.editor-vincent.workers.dev
 GitHub：https://github.com/jinyeh0923/editor-site
 
-`main` 與線上的 `public/` 逐字元一致。**內容後台在 `feat/works-admin` 上開發，10/14 晚上才合併部署，在那之前不要從這個分支部署。**
+### 內容後台已上線（比原訂 10/14 提前）
 
-### 資料統計
+- 第 1 階段（作品管理）＋第 2 階段的作品封面上傳，都在線上，**客戶已經在用**（新增作品、排序、上傳封面）。
+- 所以從現在起：**作品資料以線上 D1 為準**，本機 D1 只是 10/12 的 56 筆測試資料，兩邊不同步是正常的。
+- **不要再對線上跑 `seed-works.sql`**：它是 `INSERT OR IGNORE`，不會覆蓋改過的資料，但客戶在後台刪掉的原始作品會被加回來。
 
-```
-作品     56 筆（可點 53 / 不可點 3 / 首頁精選 10）
-  賽事紀錄與運動社群經營   21
-  商業品牌短影音          14
-  活動紀錄與日常           9
-  個人 IP 影音製作        12
-封面圖   39 張 / 3.68 MB（全部 9:16、全部 <150KB）
-案例     3 則（case-attackline / case-vlab / case-beauty）
-```
+### 線上的雲端資源（都在 `Lyrayeh0@gmail.com's Account`）
 
----
+| 資源 | 名稱 | 內容 |
+| --- | --- | --- |
+| Worker | `editor-site` | 程式 + `public/` 靜態檔 |
+| D1 | `editor-site-db` | `submissions`（來件）、`works`（作品） |
+| R2 | `editor-site-media` | 後台上傳的圖，目前只有 `works/` 資料夾（作品封面） |
 
-## 2026-10-12 這次做了什麼（內容後台第 1 階段：資料層）
-
-規劃與分階段時程見 `作品後台規劃_20261012.md`，設計約束見 `CLAUDE.md` §6.5。今晚只做資料層：**沒碰 `public/`、沒部署、沒動雲端 D1**，前台仍然讀 `works.js`。
-
-### 資料庫
-- `schema.sql` 新增 `works` 表。比規劃檔多一個 `home` 欄位（首頁精選 teaser 的依據）；**不存 `pin`**，置頂改由 `sort_order` 決定
-- `seed-works.sql`（新檔）：`works.js` 的 56 筆原樣轉入，id 不變，`sort_order` 1–56。用 `INSERT OR IGNORE`，重跑不會覆蓋後台改過的資料
-- 只套用到**本機** D1
-
-### API（`src/index.js`）
-| 路由 | 說明 |
-| --- | --- |
-| `GET /api/works` | 公開，只回 `visible=1`，依 `sort_order`，快取 60 秒 |
-| `GET /api/admin/works` | 後台用，含已下架的、所有欄位 |
-| `POST /api/admin/works` | 新增。`id` 可省略，由 url 產生（`yt-<影片代碼>` / `shorts-…` / `reels-…`）；url 為空時必須自己給 id。**新作品排最前面** |
-| `PUT /api/admin/works/:id` | 局部更新（下架只送 `{"visible":0}`）；id 不可變更 |
-| `DELETE /api/admin/works/:id` | 被案例引用時回 409 並列出案例名 |
-| `POST /api/admin/works/reorder` | `{id, dir:"up"\|"down"}`，與相鄰那筆交換 `sort_order` |
-
-- 後台路由都過 Basic Auth；寫入一律要 `Content-Type: application/json`（順便擋 CSRF），否則 415
-- url 只接受 https 的 YouTube / Instagram 作品連結，或空字串（不可點擊）
-- `poster` 限 `posters/` 底下的圖檔路徑；`ratio` 限 `9/16`、`16/9`、`1/1`
-- **刪除前的案例引用檢查**：Worker 用 `env.ASSETS.fetch("/js/cases.js")` 讀檔案文字，regex 抓每個 `works: [...]` 與前面最近的 `name:`。讀不到或解析不出來就回 503 擋下刪除。第 3 階段案例進 D1 後改成直接查詢
-- `wrangler.jsonc` 沒改：`run_worker_first` 原有的 `/api/*` 已涵蓋 `/api/works`
-
-### 驗證
-本機 curl 跑過「新增 → 修改 → 下移 / 上移 → 下架 → 刪除」，每步用 `GET /api/works` 確認；權限與欄位驗證的錯誤情境也都測過。測試資料已刪，本機 D1 回到 56 筆。
+R2 於 2026-10-13 啟用（帳號有綁付款方式，免費額度內不收費）。
 
 ---
 
-## 2026-10-08 這次做了什麼
+## 2026-10-12 ～ 10-13 這次做了什麼
+
+規劃見 `作品後台規劃_20261012.md`，設計約束見 `CLAUDE.md` §6.5。一個晚上把第 1 階段做完並上線，再接著做了分類篩選與封面上傳。
+
+### 1. 資料層（`575048c`）
+- `schema.sql` 新增 `works` 表。比規劃多一個 `home` 欄位（首頁精選）；不存 `pin`，誰排第一由 `sort_order` 決定
+- `seed-works.sql`：舊版 `works.js` 的 56 筆原樣轉入，id 不變
+- `src/index.js`：`GET /api/works`（公開）與 `/api/admin/works` 的增刪改、排序
+- 刪除前檢查案例引用：Worker 讀 `cases.js` 的文字判斷，被引用回 409，讀不到回 503
+
+### 2. 後台作品頁（`079b1ce`、`56cc61c`、`706fdba`）
+- `admin.html` 改分頁結構（來件 / 作品）
+- 排序三種方式：拖拉把手（拖到視窗邊緣自動捲動）、直接改編號、↑↓
+- 新增 / 編輯表單是跳窗（原生 `<dialog>`），點背景不關
+
+### 3. 前台改讀 API（`835a6dc`）
+- `works.js` 不再放資料，改成 `loadWorks()`；`fetchJSON` / `renderWhenLoaded` 是共用的「fetch 後渲染」
+- `workCardHTML` 所有欄位過 `escHTML`
+- `masonry.js` 改有限往前看（`LOOKAHEAD = 3`），視覺順序貼近後台排的順序
+- API 失敗時作品牆顯示一行訊息；案例照樣顯示，只是沒有代表作
+
+### 4. 第一次上線
+- 打 tag `pre-works-admin` → 雲端 D1 套 `schema.sql`、匯入 `seed-works.sql`（56 筆）→ 合併進 `main` → 部署
+- 線上驗證過：API、作品集篩選與載入更多、首頁精選、案例代表作、後台沒登入回 401
+
+### 5. 之後追加（都已上線）
+- `eb06885`：新增 4 張 IG 封面 `posters/works/reel-40` ～ `reel-43`
+- `f8afdc8`：**後台分類篩選**。選了分類只列那一類，編號與排序是「分類內」的順序，不動到其他分類
+- `eee7b43`：**作品封面上傳**（第 2 階段的一部分）
+  - 表單「上傳圖片」：瀏覽器先把圖縮到長邊 1280、轉 JPG，再上傳到 R2
+  - `POST /api/admin/media?folder=works`：驗證型別、檔頭、2 MB 上限，檔名由伺服器產生
+  - `GET /media/*`：公開輸出，快取一年
+  - `poster` 接受 `posters/…`（開發者放的）或 `media/…`（後台上傳的）
+
+### 測試方式（之後可以沿用）
+- API：本機 curl 跑過正常流程與各種該擋的情況
+- 後台與前台：用無頭瀏覽器實際操作本機頁面（排序、分類篩選、上傳、跳窗），在一份獨立的本機資料庫副本上跑，不碰正式資料
+- **沒測到的**：平板寬度的版面、實機手機上傳（尤其 iPhone 的 HEIC）、觸控裝置操作後台
+
+---
+
+## 2026-10-08 做了什麼
 
 ### 作品資料
 - 新增 18 筆作品（38 → 56）
@@ -96,7 +109,6 @@ GitHub：https://github.com/jinyeh0923/editor-site
   - `title` / `dur` / `views` 留空不再輸出空標籤或 `"undefined"`
   - **`url` 留空 → 輸出 `<div>` 而非 `<a href="#">`**，不產生死連結
   - 移除卡片右上角的分類標籤 `.cat-tag`
-- `masonry.js`：支援 `data-pin`，把置頂卡提到每個排列候選最前面
 - `work.html`：篩選按鈕照 `WORK_CATS` 排序、「全部」移到最後、預設選第一個分類
 - `wrangler.jsonc`：寫死 `account_id`
 
@@ -109,23 +121,28 @@ GitHub：https://github.com/jinyeh0923/editor-site
 ## 常用指令
 
 ```bash
-npm run dev        # 本機 http://127.0.0.1:8787
-npm run deploy     # 部署（account_id 已寫在 wrangler.jsonc，不用再帶環境變數）
+npm run dev        # 本機 http://127.0.0.1:8787（本機的 D1 與 R2，跟線上無關）
+npm run deploy     # 部署（account_id 已寫在 wrangler.jsonc）。只換程式與靜態檔，不動 D1 / R2 的資料
 
 npm run db:local   # 本機套用 schema.sql
-npm run db:remote  # 線上套用 schema.sql
-npx wrangler d1 execute editor-site-db --local --file=./seed-works.sql   # 本機匯入作品初始資料
+npm run db:remote  # 線上套用 schema.sql（CREATE TABLE IF NOT EXISTS，表已存在不做事）
+npx wrangler d1 execute editor-site-db --local --file=./seed-works.sql   # 本機匯入作品初始資料（線上不要再跑）
 
 npx wrangler login              # token 過期時（必須在真正的終端機跑，非互動環境起不來）
 npx wrangler secret put ADMIN_PASSWORD
 npx wrangler deployments list   # 看部署歷史
+npx wrangler rollback           # 線上出問題時退回上一版（只退程式，不退資料）
 ```
+
+`wrangler r2 …` 這類不讀 `wrangler.jsonc` 帳號的指令，在非互動環境要加 `CLOUDFLARE_ACCOUNT_ID=1f506a38135d78297b21c4c80f6b9020`，否則會因為有兩個帳號而報錯。
 
 ### 後台
 
-- 網址 `/admin`，帳號固定 **`admin`**（寫死在 `src/index.js:117`）
+- 網址 `/admin`，帳號固定 **`admin`**（寫在 `src/index.js` 的 `authed()`）
 - 本機密碼在 `.dev.vars`
 - **線上密碼是 Cloudflare secret，唯寫、無法讀取**，忘了只能 `wrangler secret put` 重設（立即生效，不用重新部署）
+- 後台改完，前台最多 1 分鐘才更新（`/api/works` 快取 60 秒）
+- 部署後 5 分鐘內，回訪的訪客可能拿到新 HTML 配舊 JS（`/css/*`、`/js/*` 快取 5 分鐘）
 
 ---
 
@@ -133,31 +150,33 @@ npx wrangler deployments list   # 看部署歷史
 
 ### 🔴 安全（優先）
 
-- [ ] **換掉線上 `ADMIN_PASSWORD`** — 目前與本機開發用的是同一組弱密碼。`/admin` 後面是 D1 裡的訪客個資（姓名 / Email / 需求內容），Basic Auth 沒有嘗試次數限制
+- [ ] **確認線上 `ADMIN_PASSWORD` 已經換成強密碼** — 之前與本機開發用的是同一組弱密碼。現在客戶已在用後台，`/admin` 後面有訪客個資（姓名 / Email / 需求內容）和整個作品資料的寫入權，Basic Auth 沒有嘗試次數限制
   - 或改用 **Cloudflare Access**（Google 帳號登入、免密碼、可設定誰能存取，免費額度 50 人）
 
 ### 🟡 上線前必改（詳見 `CONTENT-CHECKLIST.md`）
 
 - [ ] **Turnstile 還是官方測試金鑰** `1x00000000000000000000AA`（`index.html` / `contact.html` 兩處）
       — 換真實 Site Key 時要同步 `wrangler secret put TURNSTILE_SECRET`，兩者必須成對
-- [ ] **首頁 showreel** `data-yt="SHOWREEL_ID"`（`index.html:65`）還是佔位
+- [ ] **首頁 showreel** `data-yt="SHOWREEL_ID"`（`index.html`）還是佔位
 - [ ] **`partials.js` 的 `YT = "#"`** 還沒填真實頻道網址
       — 填好後要同步更新 `index.html` JSON-LD 的 `sameAs`
 - [ ] **`index.html` 聯絡區有 2 個 `href="#"`** 的社群連結
 - [ ] **`posters/og-cover.jpg` 不存在**（1200×630）— 分享到社群沒有預覽圖
 - [ ] **買正式網域**後全站替換 base URL（OG canonical / sitemap），目前是 `editor-site.editor-vincent.workers.dev`
 
-### 🟢 內容待補
+### 🟢 內容待補（現在由客戶在後台處理）
 
-- [ ] **17 筆 `dur`（長度）留空**（新增的 18 筆裡除了 `yt-tpvl-3` 之外全部）— 留空不會破版，只是卡片少一個標籤
-- [ ] `yt-rotary-1` / `yt-rotary-2` 標題都是「台北松仁扶輪社」，`reels-tpvl-1~3` 與 `reels-myjapantour-1~3` 也各自同名 — 牆上並排會像同一支，要區分的話補副標
-- [ ] 首頁 `.stats` 數字（200+ / 30+ / 1000萬+）還是佔位
+- [ ] 不少作品的長度（`dur`）留空 — 留空不會破版，只是卡片少一個標籤
+- [ ] 同名作品（例如兩支「台北松仁扶輪社」、`reels-tpvl-1~3`）牆上並排會像同一支，要區分的話補副標
+- [ ] 首頁 `.stats` 數字（200+ / 30+ / 1000萬+）還是佔位（要等第 4 階段才能在後台改，目前改 `index.html`）
 
 ### 🔵 可做可不做
 
+- [ ] R2 的舊圖不會自動刪除（換封面、刪作品、上傳後沒儲存都會留著）。空間不是問題，要清就到 Cloudflare 後台手動刪，或之後做自動清理
 - [ ] `work.css` 的 `.w .ov p` 已是死樣式（`role` 移除後不再輸出 `<p>`）
 - [ ] `_headers` 的 CSP `script-src` 還留著 `https://cdn.jsdelivr.net`，但 Lenis 已自架，可收緊
-- [ ] `works.js` 卡片上的 `data-cat` 屬性目前沒有程式讀取（篩選用的是按鈕自己的 `data-cat`）
+- [ ] `works.js` 卡片上的 `data-cat` 屬性目前沒有程式讀取
+- [ ] `feat/works-admin`、`feat/media-upload` 兩個分支已合併，可以刪
 
 ---
 
@@ -165,52 +184,55 @@ npx wrangler deployments list   # 看部署歷史
 
 ### 部署
 
-- **兩個 Cloudflare 帳號**：`Lyrayeh0@gmail.com`（專案在這）、`Tonyyeh080586@gmail.com`。`account_id` 已寫進 `wrangler.jsonc`，但**交接給客戶時要換成客戶帳號的 ID**
+- **兩個 Cloudflare 帳號**：`Lyrayeh0@gmail.com`（專案在這）、`Tonyyeh080586@gmail.com`。`account_id` 已寫進 `wrangler.jsonc`，但**交接給客戶時要換成客戶帳號的 ID**（D1、R2 也要跟著搬）
 - 非互動環境（CI / AI 工具）跑 `wrangler login` 會失敗，要在真正的終端機登入，或改用 `CLOUDFLARE_API_TOKEN`
+- `npm run deploy` 偶爾在最後一步回 504，但其實已經上傳成功。**不要直接重跑**，先開線上網址確認
 
 ### 資料
 
-- **`works.js` 的 `id` 是 `cases.js` 的外鍵**。改 id 一定要同步 `cases.js` 的 `works: [...]`，否則案例頁的代表作品會整區消失（只會 `console.warn`，畫面無聲壞掉）
-- id 命名採頻道前綴制：`yt-` 橫式長片、`shorts-` 直式 Shorts、`reels-` IG Reels，後面接頻道/帳號 + 流水號。新增作品照這個慣例，表在 `works.js` 檔頭
-- **IG 連結會失效**（帳號關閉、貼文刪除）。遇到就把 `url` 設為 `""`，卡片會自動變成不可點的 `div`，封面與觀看數保留。記得補 `tag`（沒有 url 判不出平台，會標成「影片」）
-- IG 分享連結的 `?stkn=` 是會過期的 token，存進 `works.js` 前先清掉
-
-### 內容後台（開發中，10/14 上線前適用）
-
-- **`seed-works.sql` 是 10/12 當下 `works.js` 的快照。** 上線前如果又改了 `works.js`（新增作品、改觀看數），seed 要重新產生，否則雲端 D1 匯入的是舊資料
+- **作品在線上 D1，不在檔案裡。** 要看線上現況用 `/admin` 或 `GET /api/works`；本機資料庫是舊的測試資料
+- **作品的 `id` 是 `cases.js` 的外鍵**，建立後不可變更。被案例引用的作品在後台刪不掉（409）
 - 刪除檢查靠 `cases.js` 目前的排版（`name:` 在 `works:` 之前、陣列是字串字面值）。大改 `cases.js` 格式後要重測刪除被引用的作品是否仍回 409
+- **IG 連結會失效**（帳號關閉、貼文刪除）。遇到就在後台把連結清空，卡片會自動變成不可點，封面與觀看數保留。記得補「左上角標籤」（沒有連結判不出平台）
+- IG 分享連結的 `?stkn=` 是會過期的 token，貼進後台前先清掉
+- 新作品會排到最前面（也是該分類的第 1 個），要調位置用後台排序
 - Windows 的 curl 用 `-d '…中文…'` 會以 cp950 送出，存進去變亂碼。測中文要用 UTF-8 檔案：`--data-binary @body.json`。瀏覽器 `fetch` 不受影響
-- 新作品會排到最前面，把原本置頂的「TPVL 元年紀實」擠下去，要用 ↑ 移回來
+
+### 後台
+
+- **觸控裝置不能拖拉排序**（瀏覽器原生拖放不支援），手機用改編號或 ↑↓
+- 選了分類時的編號是「分類內」的順序，不是整份順序；首頁精選與作品集「全部」的順序要切到「全部」排
+- 上傳的圖一律被轉成 JPG、長邊最多 1280；透明背景會被墊成深色
+
+### 本機開發
+
+- 用 AI 工具開關 dev server 時，只結束佔用連接埠的程序不夠，`wrangler` 主程序會留在背景。收工時確認沒有殘留的 `node` / `workerd` 程序
 
 ### 版面
 
-- `masonry.js` 會試 6 種排列候選挑欄高最平衡的，**DOM 順序 ≠ 視覺順序**。要固定某張卡在左上角，用 `pin: true`
-- 新增分類後若名稱很長，注意卡片上的絕對定位標籤會不會互相重疊（之前 `.cat-tag` 就撞到左上角的 `.badge`，後來整個拿掉了）
+- `masonry.js` 是有限往前看：照順序放卡，每一步只在接下來 3 張裡挑，視覺順序最多和後台順序差 2–3 格。不要改回全域挑卡
+- 新增分類後若名稱很長，注意卡片上的絕對定位標籤會不會互相重疊，也看一下後台分類按鈕列與前台篩選列的換行
 
 ---
 
 ## 下次可以接著做的
 
-### 內容後台第 1 階段（10/15 給客戶測試）
+### 內容後台（規劃見 `作品後台規劃_20261012.md`）
 
-10/12 當晚超前做完了後台頁與前台，**程式都在 `feat/works-admin`，只在本機測過，還沒部署**：
+- [x] 第 1 階段：作品管理 — 已上線
+- [ ] 第 2 階段：R2 圖片上傳 — **作品封面已上線**；案例 logo、本人照片還沒接（等第 3、4 階段要用時在 `MEDIA_FOLDERS` 加資料夾）
+- [ ] 第 3 階段：案例管理（`cases.js` 搬進 D1，代表作從作品清單勾選）。做完後刪除檢查改成直接查資料庫
+- [ ] 第 4 階段：文案（`site_settings`，白名單欄位，HTMLRewriter 注入）。開工前先跟客戶列出要開放的欄位
 
-- [x] 後台作品管理頁：`admin.html` 分頁（來件 / 作品），列表 + 新增/編輯表單、↑↓、上下架、刪除
-- [x] 後台排序：拖拉把手（拖到視窗邊緣會自動捲動）、每列編號可直接改、↑↓。都走 `POST /api/admin/works/reorder` 的 `{ids:[…]}`（整份順序，`sort_order` 重編 1..N；清單與資料庫對不上回 409）。**觸控裝置不能拖拉**（瀏覽器原生拖放不支援），手機用改編號或 ↑↓
-- [x] 後台新增 / 編輯表單是跳窗（原生 `<dialog>`，`#w-dialog`）：Esc、取消、存檔成功都會關，點背景不關（避免誤觸弄丟內容）；表單錯誤顯示在跳窗內的 `#w-form-note`，存檔成功的訊息顯示在列表上方。開關跳窗不會改變列表的捲動位置
-- [x] 前台改讀 `/api/works`：
-  - `works.js` 不再放作品資料，改成 `loadWorks()`；`fetchJSON` / `renderWhenLoaded` 是「fetch 後渲染」的共用函式，案例之後直接套用
-  - `workCardHTML` 所有欄位都過 `escHTML`
-  - `app.js` 開出 `window.revealIn(root)`，讓晚渲染的區塊接上 `.reveal` 進場動畫
-  - `masonry.js` 改有限往前看（`LOOKAHEAD = 3`），不再有 6 種候選排列與 `data-pin`
-  - API 失敗時：作品牆顯示一行訊息；案例照樣顯示，只是沒有代表作
-  - `scripts/gen-seed-works.cjs`：從舊版 `works.js` 產生 seed 的腳本（用法：`git show main:public/js/works.js > tmp.js && node scripts/gen-seed-works.cjs tmp.js seed-works.sql`）
-- [ ] **10/14（三）上線**，照規劃檔第 4 節的順序：本機三種寬度再看一輪 → `git tag pre-works-admin` → 雲端 D1 套 `schema.sql` 與 `seed-works.sql` → 合併、部署 → 用線上網址重跑一遍。出問題 `npx wrangler rollback`
-- [ ] `CLAUDE.md` 的 §2（script 載入順序）、§5（作品資料、masonry、`pin`）還是舊描述，要改成現況；改完重新上傳覆蓋 claude.ai 專案知識庫那一份（10/12 加的 §6.5 也還沒上傳）
-- [ ] 開工前地雷：上面「版面」小節寫的「masonry 試 6 種排列」「`pin: true`」已不適用
+### 等客戶回饋
+
+- 10/15 原訂給客戶測試，實際上客戶 10/13 就開始用了。收集他用後台的問題（手機操作、上傳、排序）再決定要不要調整
+
+### 文件
+
+- [ ] `CLAUDE.md` 改過了（§2、§5、§6、§6.5、§7），**要重新上傳覆蓋 claude.ai 專案知識庫那一份**
 
 ### 其他
 
-1. **換掉 admin 密碼**（或接 Cloudflare Access）— 給客戶後台前一定要換
+1. 確認 admin 密碼已換（或接 Cloudflare Access）
 2. 把上面 🟡 那批佔位內容補完
-3. 補 `dur` 與重複標題

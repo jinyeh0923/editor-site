@@ -1,8 +1,8 @@
 # 薯餅 — 短影音剪輯作品集
 
-自由接案短影音剪輯師「葉書銘（薯餅）」的個人作品集網站。短影音剪輯 × 社群短影音經營，作品以 **IG Reels（9:16）** 為主、穿插 **YouTube 長片（16:9）**。靜態前端 + 表單寫入 D1 + `/admin` 後台檢視，零月費、允許商業用途。
+自由接案短影音剪輯師「葉書銘（薯餅）」的個人作品集網站。短影音剪輯 × 社群短影音經營，作品以 **IG Reels（9:16）** 為主、穿插 **YouTube 長片（16:9）**。靜態前端 + 表單寫入 D1 + `/admin` 內容後台（看來件、管理作品、上傳封面），零月費、允許商業用途。
 
-> 開發/維護前先讀 **`PROJECT-KNOWLEDGE.md`**（架構、慣例、設計系統、平台地雷）與 **`CONTENT-CHECKLIST.md`**（上線前要填的真實內容）。本 README 專管**安裝與部署**。
+> 開發/維護前先讀 **`CLAUDE.md`**（架構、慣例、設計系統、平台地雷）與 **`CONTENT-CHECKLIST.md`**（上線前要填的真實內容）。本 README 專管**安裝與部署**。
 
 ## 技術
 純手寫 HTML / CSS / JS（**無框架、無 build step**）＋ Cloudflare Workers + D1 + 靜態資源（Wrangler 部署）。平滑滾軸用自架 Lenis（`public/vendors/`）。字體 Noto Sans TC + JetBrains Mono。
@@ -12,14 +12,14 @@
 - `work.html` 作品集（分類篩選 + masonry + 載入更多）
 - `cases.html` 社群實操案例（`case1.html` 為 featured 變體）
 - `contact.html` 獨立聯絡頁
-- `admin.html` 表單後台（需登入）
+- `admin.html` 後台（需登入）：來件、作品管理（新增 / 編輯 / 上下架 / 排序 / 上傳封面）
 
 ## 目錄
 ```
 public/   前端（html / css/ / js/ / posters/ / vendors/ / _headers）
-src/      Cloudflare Worker（表單收件 + 後台 API + 後台頁 gate）
-schema.sql  wrangler.jsonc  package.json
-PROJECT-KNOWLEDGE.md  README.md  CONTENT-CHECKLIST.md
+src/      Cloudflare Worker（表單收件 + 作品 API + 圖片上傳 / 輸出 + 後台 API + 後台頁 gate）
+schema.sql  seed-works.sql  scripts/  wrangler.jsonc  package.json
+CLAUDE.md  README.md  CONTENT-CHECKLIST.md
 ```
 
 ---
@@ -91,14 +91,17 @@ npm run deploy
 - **機密不進 git**：`.gitignore` 已擋掉 `.dev.vars`、`.wrangler`、`node_modules`，別手動把密碼推上去。
 - **記得跑 `db:remote`**：只跑 local 的話，上線後表單會噴錯。
 - **兩顆 D1 別搞混**：`dev` 用的是本機那顆（只拿來測）；雲端那顆才是唯一的正式資料。
-- **`run_worker_first` 要含 `["/admin","/admin.html","/api/*"]`**：少了 `/api/*`，GET 的後台 API 會被 `not_found_handling` 攔成 404、進不了 Worker。
+- **`run_worker_first` 要含 `["/admin","/admin.html","/api/*","/media/*"]`**：少了 `/api/*` 或 `/media/*`，GET 的 API 與後台上傳的圖會被 `not_found_handling` 攔成 404、進不了 Worker。
+- **作品資料在雲端 D1、上傳的圖在 R2**（bucket `editor-site-media`），都不在 git 裡。部署只換程式與靜態檔，不會動到它們。第一次建置的步驟見 `CLAUDE.md` §7。
 - **schema 欄位要對齊**：雲端舊表若缺欄位（如 `video_type`、`status`）會報 `no such column`。測試資料可 `DROP TABLE submissions` 再 `--file=./schema.sql` 重建；要保留資料用 `ALTER TABLE ... ADD COLUMN`。
-- **後台轉址迴圈**：Worker 取後台頁要抓不帶 `.html` 的 `/admin`（細節見 `PROJECT-KNOWLEDGE.md`）。
+- **後台轉址迴圈**：Worker 取後台頁要抓不帶 `.html` 的 `/admin`（細節見 `CLAUDE.md`）。
 
 ## 文件分工
 - **README.md（本檔）**：安裝、部署、維運。
-- **PROJECT-KNOWLEDGE.md**：架構、檔案結構、CSS 拆分、共用元件、Worker 路由、設計系統、平台地雷。
+- **CLAUDE.md**：架構、檔案結構、CSS 拆分、共用元件、Worker 路由、設計系統、平台地雷。
 - **CONTENT-CHECKLIST.md**：上線前把佔位內容換成真實內容的逐項清單。
+- **HANDOVER.md**：目前狀態、每次的工作紀錄、待辦與地雷，開工前先看。
+- **作品後台規劃_20261012.md**：內容後台的分階段規劃。
 
 ## 之後 / 升級
 - **`/admin` 升級**：可改用 Cloudflare Access（Zero Trust 免費），email 驗證碼保護，不用自己維護 Basic Auth 密碼。
