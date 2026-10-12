@@ -35,7 +35,7 @@ public/
 ├─ cases.html        社群實操案例（data-page="cases"）
 ├─ case1.html        案例頁的 featured 變體（第一個案例做成直式大海報）
 ├─ contact.html      獨立聯絡頁（data-page="contact"）
-├─ admin.html        後台表單檢視（需登入，設計過的深色頁）
+├─ admin.html        後台（需登入）：分頁結構，目前有「來件」「作品」兩頁
 ├─ thanks.html       表單送出後的感謝頁（自帶內聯樣式，不載 core.css）
 ├─ 404.html          404 頁（自帶內聯樣式）
 ├─ _headers          安全標頭 / CSP（必須在資源根目錄）
@@ -43,8 +43,10 @@ public/
 ├─ js/    app.js partials.js works.js masonry.js cases.js
 ├─ posters/          手動封面圖（IG 作品封面、本人照片、案例封面、服務圖…）
 └─ vendors/          自架第三方套件（如 Lenis）+ README（記版本）
-src/index.js          Cloudflare Worker（表單收件 + 後台 API + 後台頁 gate）
-schema.sql            D1 資料表定義
+src/index.js          Cloudflare Worker（表單收件 + 作品 API + 後台 API + 後台頁 gate）
+schema.sql            D1 資料表定義（submissions、works）
+seed-works.sql        works 表的初始資料（2026-10-12 從舊版 works.js 轉出的 56 筆）
+scripts/              gen-seed-works.cjs：從舊版 works.js 重新產生 seed
 wrangler.jsonc        Cloudflare 設定
 package.json          scripts: dev / deploy / db:local / db:remote
 ```
@@ -64,6 +66,7 @@ package.json          scripts: dev / deploy / db:local / db:remote
 - `masonry.js` 只在有作品牆 `.wall` 的頁面載入（index、work）。
 - `cases.js` 只在案例頁載入（cases、case1），且必須在 `works.js` 之後（要用 `workById` 取作品）。
 - `partials.js` 必須在 `app.js` 之前（app.js 會操作 partials 注入的 nav/抽屜/彈窗）。
+- **作品是非同步載入的**：`works.js` 只提供函式，資料要等 `loadWorks()`（fetch `/api/works`）回來才有。各頁的內聯 script 一律用 `renderWhenLoaded(el, loadWorks(), render)` 渲染，不能在載入當下直接讀 `WORKS`（那時是空陣列）。
 
 ## 3. CSS 拆分原則（改樣式前必讀）
 
@@ -109,14 +112,21 @@ package.json          scripts: dev / deploy / db:local / db:remote
 
 - 連結加 `class="js-email" data-email="..."`，`app.js` 會攔截、開深色毛玻璃背景的置中彈窗（複製地址 / 開郵件 App）。
 
-### 作品資料與卡片 → `works.js`
+### 作品資料與卡片 → D1 `works` 表 + `works.js`
 
+- **作品資料在 D1 的 `works` 表，由客戶在 `/admin` 的「作品」頁管理**（新增 / 編輯 / 上下架 / 排序 / 刪除）。`works.js` 不再放資料，只負責載入與渲染卡片。要改作品內容 → 用後台，不是改檔案。
+- 前台從 `GET /api/works` 讀（只有上架的，順序＝後台排的）。`works.js` 提供：
+  - `loadWorks()`：抓資料並填入 `window.WORKS`，回傳 Promise。同一頁只抓一次。
+  - `fetchJSON(url)` / `renderWhenLoaded(el, promise, render, opts)`：「fetch 後渲染」的共用函式。失敗或空資料時在 `el` 顯示 `.data-msg` 訊息，不讓整頁壞掉；渲染後自動呼叫 `revealIn(el)` 接上進場動畫。之後案例、文案改讀 API 也用這兩支。
+  - `escHTML()`：**作品內容是後台輸入的，串進 HTML 前一律跳脫**。`workCardHTML` 已全欄位處理，新增欄位時要比照。
 - 每筆作品只給 `url`，程式自動判斷平台：
   - **YouTube**（youtu.be / watch?v= / shorts/）→ 縮圖自動抓 `maxresdefault.jpg`（1280×720），失敗退回 `hqdefault.jpg`，再失敗顯示佔位。
   - **Instagram**（reel/p/tv）→ **無法自動抓縮圖**（平台限制，見 §8），必須給 `poster:"posters/xxx.jpg"`。
 - `dur`（長度）**一律手填**（YT/IG 都無法用免費方式自動抓）。
 - `views`（觀看數，選填字串如 `"239萬"`）**一律手填**——觀看數同樣無法自動抓（YT 要 Data API key、IG 無公開 API）。有填才在卡片顯示 `▶ 觀看數` 標籤（`.views`，放角落、不與 `.dur`/`.badge` 重疊）；沒填不顯示。
-- 每筆作品有穩定 `id`，供案例頁 `cases.js` 以 `workById(id)` 參照重用卡片。
+- 每筆作品有穩定 `id`，**建立後不可變更**，供案例頁 `cases.js` 以 `workById(id)` 參照重用卡片。後台新增時 id 可留空，伺服器用影片代碼產生（`yt-…` / `shorts-…` / `reels-…`）。
+- `url` 只接受 YouTube / Instagram 連結，或空字串（帳號已關閉等情況：卡片輸出不可點的 `div`，此時要手填 `tag`）。
+- `home`（0/1）：1＝出現在首頁精選 teaser。沒有 `pin` 欄位了，誰排第一由後台順序決定。
 - 比例 `ratio` 不填會自動推斷（shorts/reel→9:16、YT 長片→16:9）；`tag` 不填自動標（Shorts/Reels/YouTube）。
 - 卡片連結 `target="_blank" rel="noopener noreferrer"`，直接導去平台（**不要嵌 iframe**——要把流量導去客戶頻道）。
 - 分類篩選（`.filter`）按鈕自動從 `WORKS` 的 `cat` 產生（不要用 `<select>`）。
@@ -126,15 +136,16 @@ package.json          scripts: dev / deploy / db:local / db:remote
 
 - 真 masonry（欄高獨立、間距一致）：JS 絕對定位每張卡。
 - **16:9 卡片橫跨 2 欄**（寬度 = 2 張 9:16），製造交錯感。
-- 用 `grid-auto-flow:dense` 式的貪婪填補（每輪挑能放在最低位置的卡），填掉跨欄造成的空洞，**代價是視覺順序會重排**（DOM/無障礙順序不變）。
+- **有限往前看**補洞：照 DOM 順序放卡，每一步只在接下來 `LOOKAHEAD`（3）張裡挑能放在最高位置的那張，排最前的那張最多被跳過 2 次。客戶在後台自己排順序，所以視覺順序必須貼近 DOM 順序（實測最多差 2–3 格）；不要改回全域挑卡或多種候選排列。
 - 欄數（2/3/4）與斷點（640/1024）寫在 `colCount()`，間距在 `gapPx()`，要與 CSS 一致。
-- 透過 `MutationObserver` 自動在「篩選 / 載入更多」後重排，不用改 work.html 邏輯。
+- 透過 `MutationObserver` 自動在「資料載入 / 篩選 / 載入更多」後重排，不用改 work.html 邏輯。牆面沒有卡片時（讀取失敗的訊息、空清單）交還一般排版，讓訊息看得到。
 
 ### 社群實操案例（資料驅動）→ `cases.js`
 
 - 案例頁（cases.html / case1.html）**改為資料驅動**：案例內容都在 `cases.js` 的 `CASES` 陣列，新增案例 = 推一個物件，不動 HTML。
 - 每個案例物件欄位：`id`、`name`（帳號名）、`handle`、`kind`（類型小標）、`tagline`（定位 slogan）、`follows`（各平台粉絲 `[{platform,value}]`，用平台 inline SVG icon 顯示）、`summary`、`highlights`（亮點 `[{icon,title,desc}]`，icon 為 key 對應內建 inline SVG）、`metrics`（數據條 `[{label,value}]`）、`logo`（選填，圓形頭像，`posters/logos/xxx.png`）、`works`（作品 id 陣列）。
-- **代表作重用作品卡片**：`works` 裡的 id 透過 `works.js` 的 `workById(id)` 取出、用既有 `workCardHTML` 渲染（含 `.views` 標籤）。找不到 id 就 `console.warn` 略過，不讓整頁崩。
+- **代表作重用作品卡片**：`works` 裡的 id 透過 `works.js` 的 `workById(id)` 取出、用既有 `workCardHTML` 渲染（含 `.views` 標籤）。找不到 id 就 `console.warn` 略過，不讓整頁崩。因為要查作品，**`renderCases` 要等 `loadWorks()` 完成後才呼叫**；作品讀取失敗時案例照樣渲染，只是沒有代表作。
+- 被案例引用的作品在後台刪不掉（API 回 409）。Worker 是讀 `cases.js` 的文字來判斷的，依賴目前的寫法（`name:` 在 `works:` 之前、陣列是字串字面值），大改 `cases.js` 格式後要重測。
 - 空欄位（如待定案例的空 `follows`/`highlights`/`logo`）要優雅省略、不破版。
 - 數字（follows / metrics）都是**手填**、集中在 `cases.js`，客戶要改就改這一個檔。
 
@@ -150,6 +161,13 @@ package.json          scripts: dev / deploy / db:local / db:remote
 
 - `POST /api/contact`：驗證後寫入 D1。驗證項：body 大小上限、蜜罐、**個資同意必填（伺服器端再擋一次）**、長度上限（name≤100 / email≤254 / message≤5000）、Email 格式、`video_type` 白名單、**Turnstile（只有設了 `TURNSTILE_SECRET` 才驗證，沒設則略過）**。成功 303 轉址到 `/thanks`（不帶 .html，避免多跳一次轉址）。
 - `GET /api/admin/submissions`：Basic Auth → 回 JSON（含 `Cache-Control:no-store`、`nosniff`）。
+- `GET /api/works`：公開，只回上架的作品，依 `sort_order`，`Cache-Control: public, max-age=60`（所以後台改完，前台最多 1 分鐘才更新）。
+- `/api/admin/works`（Basic Auth，寫入一律要 `Content-Type: application/json`，順便擋 CSRF）：
+  - `GET`：全部作品（含下架）。
+  - `POST`：新增，排在最前面。
+  - `PUT /:id`：局部更新（下架只送 `{"visible":0}`）；id 不可變更。
+  - `DELETE /:id`：被案例引用回 409；讀不到 `cases.js` 回 503，不放行。
+  - `POST /reorder`：`{ids:[…]}` 整份順序（`sort_order` 重編 1..N，清單與資料庫對不上回 409），或 `{id, dir}` 與相鄰交換。
 - `/admin`、`/admin.html`：Basic Auth → 用 `env.ASSETS.fetch(new URL("/admin", url))` 交出後台頁。**注意：一定要抓不帶 .html 的 `/admin`**，否則資源層會把 `/admin.html` 轉址回 `/admin` → 無限迴圈。
 - 其餘 → 靜態資源。
   安全：所有寫入用參數化 `.bind()`（防 SQLi）；後台 `admin.html` 用 `textContent` 渲染使用者資料（防 XSS）；密碼比對用常數時間 `safeEqual`；`ADMIN_PASSWORD`、`TURNSTILE_SECRET` 放 secret，不進程式碼。
@@ -157,6 +175,8 @@ package.json          scripts: dev / deploy / db:local / db:remote
 ## 6.5 內容後台（進行中）
 
 目標：讓客戶（薯餅）在 /admin 自己管理內容。**內容由客戶改，版型設計由開發者改**，後台不做任何版面編輯功能。
+
+狀態：第 1 階段已實作（作品 API、後台作品頁含拖拉排序、前台改讀 API、masonry 有限往前看）；第 2–4 階段未開始。
 
 分階段（依序做，每階段完成才開下一階段）：
 1. 作品管理：works 搬進 D1，後台可新增/編輯/刪除/上下架/排序（↑↓ 按鈕交換相鄰 sort_order）。IG 封面暫時手填路徑。
@@ -186,6 +206,7 @@ npm run deploy
 ```
 
 - `wrangler.jsonc` 的 `run_worker_first` 必須含 `["/admin", "/admin.html", "/api/*"]`，否則 GET 的 API 會被 `not_found_handling:"404-page"` 當成找不到檔案、回 404，進不了 Worker。
+- `works` 表第一次上線：`npm run db:remote` 建表後，再 `npx wrangler d1 execute editor-site-db --remote --file=./seed-works.sql` 匯入初始資料（`INSERT OR IGNORE`，重跑不會覆蓋後台改過的）。本機把 `--remote` 換成 `--local`。
 - 改了 schema 後，雲端舊表若缺欄位會報 `no such column`。測試資料可直接 `DROP TABLE submissions` 再 `--file=./schema.sql` 重建；要保留資料就用 `ALTER TABLE ... ADD COLUMN`。
 - **CSS/JS 快取**：`_headers` 已對 `/css/*`、`/js/*` 設 `Cache-Control: public, max-age=300, must-revalidate`。改完 CSS/JS 部署後，最多 5 分鐘使用者才拿到新版（不是 cookie 問題，是瀏覽器快取）。要更即時把 300 調小。因此不需要在 HTML 加 `?v=` 版本號。
 
@@ -210,6 +231,7 @@ npm run deploy
 2. 樣式放對檔（§3 判斷規則）；用到 token 不寫死色碼。
 3. 任何動畫/位移都加 `prefers-reduced-motion` 例外。
 4. 改 nav/footer/聯絡資訊 → 改 `partials.js`，不要在各頁複製。
-5. 改案例內容 → 改 `cases.js` 的 `CASES`，不要動 HTML；代表作用作品 `id` 參照、不要重貼一份。
+5. 改案例內容 → 改 `cases.js` 的 `CASES`，不要動 HTML；代表作用作品 `id` 參照、不要重貼一份。改作品內容 → 用 `/admin` 後台，不是改檔案。
+   - 新增會顯示後台輸入內容的地方 → 用 `escHTML`（前台）或 `textContent`（後台）。
 6. 需要 icon → 手寫 inline SVG，不引入外部圖示庫；RWD 斷點用 640/1024。
 7. 改完確認桌機/平板/手機三種寬度、`.reveal` 進場、時間碼順序、無破版。
