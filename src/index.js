@@ -1,6 +1,7 @@
 // Cloudflare Worker 進入點。
 // 1) 收表單寫進 D1（含驗證）  2) 後台資料 JSON API  3) 後台頁面 admin.html（需登入）
-// 4) 作品 works：公開讀取 + 後台增刪改排序  5) 其餘靜態檔。
+// 4) 作品 works：公開讀取 + 後台增刪改排序  5) 圖片 media：後台上傳到 R2、/media/* 公開讀取
+// 6) 其餘靜態檔。
 
 const LIMITS = { name: 100, email: 254, message: 5000 };
 const VIDEO_TYPES = [
@@ -14,7 +15,14 @@ const VIDEO_TYPES = [
 const WORK_LIMITS = { url: 300, cat: 40, title: 120, role: 60, dur: 12, views: 20, poster: 200, ratio: 5, tag: 20 };
 const WORK_RATIOS = ["9/16", "16/9", "1/1"];
 const WORK_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
-const POSTER_RE = /^posters\/[\w\-./]+\.(jpe?g|png|webp|avif)$/i;
+// posters/＝開發者放進網站的圖檔；media/＝後台上傳到 R2 的圖
+const POSTER_RE = /^(posters|media)\/[\w\-./]+\.(jpe?g|png|webp|avif)$/i;
+
+// 圖片上傳（R2）。後台會先在瀏覽器縮圖再送，正常只有一兩百 KB。
+const MEDIA_MAX = 2 * 1024 * 1024;
+const MEDIA_TYPES = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+const MEDIA_FOLDERS = ["works"]; // 之後案例 logo、本人照片各加一個資料夾
+const MEDIA_KEY_RE = /^[a-z]+\/[A-Za-z0-9-]+\.(jpg|png|webp)$/;
 
 export default {
   async fetch(request, env) {
@@ -32,6 +40,12 @@ export default {
     }
     if (url.pathname === "/api/admin/works" || url.pathname.startsWith("/api/admin/works/")) {
       return handleAdminWorks(request, env, url);
+    }
+    if (url.pathname === "/api/admin/media") {
+      return handleAdminMedia(request, env, url);
+    }
+    if (url.pathname.startsWith("/media/")) {
+      return handleMedia(request, env, url);
     }
     // 後台頁面：先過 Basic Auth，再交出設計好的 admin.html
     // 注意：要抓「不帶 .html」的 /admin，否則資源層會把 /admin.html 轉址回 /admin → 無限迴圈
@@ -307,7 +321,7 @@ function validateWork(input, cur) {
   if (!w.cat) return { error: "缺少分類 cat" };
   if (w.url && !parseWorkUrl(w.url)) return { error: "url 只接受 YouTube 或 Instagram 的作品連結（https）" };
   if (w.poster && (!POSTER_RE.test(w.poster) || w.poster.includes(".."))) {
-    return { error: "poster 必須是 posters/ 底下的圖檔路徑" };
+    return { error: "封面必須是上傳的圖片，或 posters/ 底下的圖檔路徑" };
   }
   if (w.ratio && !WORK_RATIOS.includes(w.ratio)) return { error: "ratio 只能是 " + WORK_RATIOS.join("、") };
 
@@ -354,6 +368,64 @@ function parseWorkUrl(s) {
 function idFromUrl(s) {
   const p = s ? parseWorkUrl(s) : null;
   return p ? p.prefix + "-" + p.code : "";
+}
+
+// ---- 圖片 media（R2）----
+// 公開讀取。檔名是上傳時隨機產生的、內容不會變，所以可以長期快取。
+async function handleMedia(request, env, url) {
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return new Response("method not allowed", { status: 405 });
+  }
+  const key = url.pathname.slice("/media/".length);
+  const obj = env.MEDIA && MEDIA_KEY_RE.test(key) ? await env.MEDIA.get(key) : null;
+  if (!obj) return new Response("not found", { status: 404 });
+  return new Response(request.method === "HEAD" ? null : obj.body, {
+    headers: {
+      "Content-Type": (obj.httpMetadata && obj.httpMetadata.contentType) || "application/octet-stream",
+      "Content-Length": String(obj.size),
+      "ETag": obj.httpEtag,
+      "Cache-Control": "public, max-age=31536000, immutable",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+}
+
+// 上傳：POST /api/admin/media?folder=works，body 就是圖檔本身，Content-Type 是圖片型別。
+// 圖片型別跟 application/json 一樣不是「簡單型別」，跨站送不出來（會先被 CORS preflight 擋下），所以同樣擋得住 CSRF。
+// 檔名由伺服器產生（不採用使用者的檔名）；回傳的 path 直接存進作品的 poster。
+async function handleAdminMedia(request, env, url) {
+  if (!authed(request, env)) return needAuth();
+  if (request.method !== "POST") return json({ error: "method not allowed" }, 405);
+  if (!env.MEDIA) return json({ error: "圖片上傳尚未啟用（沒有 R2）" }, 503);
+
+  const folder = url.searchParams.get("folder") || "";
+  if (!MEDIA_FOLDERS.includes(folder)) return json({ error: "folder 不正確" }, 400);
+  const type = (request.headers.get("content-type") || "").toLowerCase().split(";")[0].trim();
+  const ext = MEDIA_TYPES[type];
+  if (!ext) return json({ error: "只接受 JPG、PNG、WebP 圖片" }, 415);
+  if (Number(request.headers.get("content-length") || 0) > MEDIA_MAX) {
+    return json({ error: "圖片太大（上限 2 MB）" }, 413);
+  }
+
+  const buf = await request.arrayBuffer();
+  if (!buf.byteLength) return json({ error: "沒有收到圖片" }, 400);
+  if (buf.byteLength > MEDIA_MAX) return json({ error: "圖片太大（上限 2 MB）" }, 413);
+  // 內容必須真的是宣告的那種圖檔（看檔頭），不能只信 Content-Type
+  if (sniffImage(new Uint8Array(buf.slice(0, 12))) !== type) {
+    return json({ error: "檔案內容不是有效的 JPG、PNG、WebP 圖片" }, 400);
+  }
+
+  const rand = [...crypto.getRandomValues(new Uint8Array(8))].map((b) => b.toString(16).padStart(2, "0")).join("");
+  const key = folder + "/" + new Date().toISOString().slice(0, 10).replace(/-/g, "") + "-" + rand + "." + ext;
+  await env.MEDIA.put(key, buf, { httpMetadata: { contentType: type } });
+  return json({ path: "media/" + key, size: buf.byteLength }, 201);
+}
+function sniffImage(b) {
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return "image/jpeg";
+  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47 && b[4] === 0x0d && b[5] === 0x0a && b[6] === 0x1a && b[7] === 0x0a) return "image/png";
+  const s = String.fromCharCode(...b);
+  if (s.slice(0, 4) === "RIFF" && s.slice(8, 12) === "WEBP") return "image/webp";
+  return "";
 }
 
 // ---- helpers ----

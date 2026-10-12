@@ -22,7 +22,8 @@
     "binding": "ASSETS",
     "not_found_handling": "404-page",
     // 讓 /admin 與 /admin.html 先經過 Worker（驗證），不被當靜態檔直接送出
-    "run_worker_first": ["/admin", "/admin.html","/api/*"]
+    // /media/* 是後台上傳的圖片（存在 R2），由 Worker 讀出來
+    "run_worker_first": ["/admin", "/admin.html", "/api/*", "/media/*"]
   },
 
   // D1 資料庫綁定。執行 `wrangler d1 create editor-site-db` 後，
@@ -32,6 +33,15 @@
       "binding": "DB",
       "database_name": "editor-site-db",
       "database_id": "3af300a2-90c0-442c-84e5-728c716345c5"
+    }
+  ],
+
+  // R2：後台上傳的圖片（作品封面；之後案例 logo、本人照片共用）。
+  // 第一次要先在 Cloudflare 後台啟用 R2，再 `npx wrangler r2 bucket create editor-site-media`。
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "editor-site-media"
     }
   ]
 }

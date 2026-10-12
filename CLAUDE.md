@@ -41,9 +41,9 @@ public/
 ├─ _headers          安全標頭 / CSP（必須在資源根目錄）
 ├─ css/   core.css home.css work.css cases.css
 ├─ js/    app.js partials.js works.js masonry.js cases.js
-├─ posters/          手動封面圖（IG 作品封面、本人照片、案例封面、服務圖…）
+├─ posters/          手動封面圖（IG 作品封面、本人照片、案例封面、服務圖…）。後台上傳的圖不在這裡，在 R2（網址 /media/…）
 └─ vendors/          自架第三方套件（如 Lenis）+ README（記版本）
-src/index.js          Cloudflare Worker（表單收件 + 作品 API + 後台 API + 後台頁 gate）
+src/index.js          Cloudflare Worker（表單收件 + 作品 API + 圖片上傳 / 輸出 + 後台 API + 後台頁 gate）
 schema.sql            D1 資料表定義（submissions、works）
 seed-works.sql        works 表的初始資料（2026-10-12 從舊版 works.js 轉出的 56 筆）
 scripts/              gen-seed-works.cjs：從舊版 works.js 重新產生 seed
@@ -121,7 +121,7 @@ package.json          scripts: dev / deploy / db:local / db:remote
   - `escHTML()`：**作品內容是後台輸入的，串進 HTML 前一律跳脫**。`workCardHTML` 已全欄位處理，新增欄位時要比照。
 - 每筆作品只給 `url`，程式自動判斷平台：
   - **YouTube**（youtu.be / watch?v= / shorts/）→ 縮圖自動抓 `maxresdefault.jpg`（1280×720），失敗退回 `hqdefault.jpg`，再失敗顯示佔位。
-  - **Instagram**（reel/p/tv）→ **無法自動抓縮圖**（平台限制，見 §8），必須給 `poster:"posters/xxx.jpg"`。
+  - **Instagram**（reel/p/tv）→ **無法自動抓縮圖**（平台限制，見 §8），必須給 `poster`：客戶在後台上傳（存成 `media/works/….jpg`），或沿用開發者放進網站的 `posters/xxx.jpg`。兩種路徑都是相對於網站根目錄，前台不用分辨。
 - `dur`（長度）**一律手填**（YT/IG 都無法用免費方式自動抓）。
 - `views`（觀看數，選填字串如 `"239萬"`）**一律手填**——觀看數同樣無法自動抓（YT 要 Data API key、IG 無公開 API）。有填才在卡片顯示 `▶ 觀看數` 標籤（`.views`，放角落、不與 `.dur`/`.badge` 重疊）；沒填不顯示。
 - 每筆作品有穩定 `id`，**建立後不可變更**，供案例頁 `cases.js` 以 `workById(id)` 參照重用卡片。後台新增時 id 可留空，伺服器用影片代碼產生（`yt-…` / `shorts-…` / `reels-…`）。
@@ -155,6 +155,8 @@ package.json          scripts: dev / deploy / db:local / db:remote
 - **作品頁**：一張列表，每列有排序、封面、標題（可點去平台）+ id、分類、長度、觀看、狀態、操作（編輯 / 上架或下架 / 刪除）。下架的列變淡。
 - **排序三種方式，都呼叫 `moveTo(id, 位置)`**：拖拉左邊的把手（拖到視窗上下緣會自動捲動）、直接改編號後按 Enter、↑↓。畫面先更新，再把整份順序送 `POST /api/admin/works/reorder` 的 `{ids}`；失敗就重抓。**觸控裝置不能拖拉**（瀏覽器原生拖放不支援），手機靠改編號或 ↑↓。
 - **新增 / 編輯表單是跳窗**（原生 `<dialog id="w-dialog">`，`showModal()`）：兩者共用同一張表單，編輯時隱藏「作品 ID」欄。Esc、取消、存檔成功會關；**點背景不關**（避免誤觸弄丟輸入）。之後案例、文案的表單比照用跳窗。
+- **分類篩選**：列表上方的按鈕（`#w-filter`）。選了分類只列那一類，編號與排序都是「分類內」的順序：該分類在整份順序裡佔的那幾格不變，只在那幾格裡換位置，其他分類不動（`moveTo` 處理）。「全部」排的是整份順序。
+- **封面圖上傳**：表單的「上傳圖片」先在瀏覽器把圖縮到長邊 1280、轉成 JPG，再送 `POST /api/admin/media?folder=works`，回來的路徑填進「封面圖」欄，按「儲存」才套用。路徑欄仍可手填 `posters/…`。上傳中鎖住「儲存」。
 - **訊息位置**：表單的錯誤顯示在跳窗內（`#w-form-note`）；存檔成功與列表操作的結果顯示在列表上方（`#w-note`）。API 錯誤直接顯示伺服器回的中文 `error`。
 - 送出期間用 `run()` 鎖住所有操作（`busy`），避免連點造成順序錯亂。
 - 使用者與後台輸入的資料一律用 `createElement` + `textContent` 渲染，不要串 HTML 字串。
@@ -178,18 +180,22 @@ package.json          scripts: dev / deploy / db:local / db:remote
   - `PUT /:id`：局部更新（下架只送 `{"visible":0}`）；id 不可變更。
   - `DELETE /:id`：被案例引用回 409；讀不到 `cases.js` 回 503，不放行。
   - `POST /reorder`：`{ids:[…]}` 整份順序（`sort_order` 重編 1..N，清單與資料庫對不上回 409），或 `{id, dir}` 與相鄰交換。
+- `POST /api/admin/media?folder=works`（Basic Auth）：上傳圖片到 R2。body 就是圖檔，`Content-Type` 必須是 `image/jpeg` / `image/png` / `image/webp`（非簡單型別，跨站送不出來，同樣擋 CSRF）；上限 2 MB；檢查檔頭確認真的是那種圖；檔名由伺服器產生（`works/<日期>-<隨機>.jpg`）。回 `{path:"media/works/….jpg"}`。可用的資料夾列在 `MEDIA_FOLDERS`，之後案例 logo、本人照片各加一個。
+- `GET /media/*`：公開，從 R2 讀圖。檔名不會重複、內容不會變，所以 `Cache-Control: immutable` 一年。
 - `/admin`、`/admin.html`：Basic Auth → 用 `env.ASSETS.fetch(new URL("/admin", url))` 交出後台頁。**注意：一定要抓不帶 .html 的 `/admin`**，否則資源層會把 `/admin.html` 轉址回 `/admin` → 無限迴圈。
 - 其餘 → 靜態資源。
+  作品的 `poster` 只接受 `posters/…` 或 `media/…` 的圖檔路徑（`POSTER_RE`），不接受外部網址。
+  **R2 的圖不會自動刪除**：作品刪除、換封面、上傳後沒儲存，舊圖都留在 R2（刻意的，避免誤刪還在用的圖）。要清就到 Cloudflare 後台手動刪。
   安全：所有寫入用參數化 `.bind()`（防 SQLi）；後台 `admin.html` 用 `textContent` 渲染使用者資料（防 XSS）；密碼比對用常數時間 `safeEqual`；`ADMIN_PASSWORD`、`TURNSTILE_SECRET` 放 secret，不進程式碼。
 
 ## 6.5 內容後台（進行中）
 
 目標：讓客戶（薯餅）在 /admin 自己管理內容。**內容由客戶改，版型設計由開發者改**，後台不做任何版面編輯功能。
 
-狀態：第 1 階段已實作（作品 API、後台作品頁含拖拉排序與跳窗表單、前台改讀 API、masonry 有限往前看）；第 2–4 階段未開始。
+狀態：第 1 階段已實作（作品 API、後台作品頁含拖拉排序、分類篩選與跳窗表單、前台改讀 API、masonry 有限往前看）；第 2 階段做了作品封面上傳（案例 logo、本人照片還沒接）；第 3–4 階段未開始。
 
 分階段（依序做，每階段完成才開下一階段）：
-1. 作品管理：works 搬進 D1，後台可新增/編輯/刪除/上下架/排序（拖拉、改編號、↑↓，見 §5「後台」）。IG 封面暫時手填路徑。
+1. 作品管理：works 搬進 D1，後台可新增/編輯/刪除/上下架/排序（拖拉、改編號、↑↓，見 §5「後台」）。IG 封面在後台上傳（第 2 階段），也可手填路徑。
 2. R2 圖片上傳：作品封面、案例 logo、本人照片共用，經 Worker `/media/*` 同網域輸出。
 3. 案例管理：cases.js 搬進 D1，代表作從作品清單勾選。
 4. 文案：site_settings key-value 表，只開放白名單欄位（如關於剪輯者、stats、Showreel ID），用 Worker HTMLRewriter 伺服器端注入（保 SEO），不用前端 fetch。
@@ -215,7 +221,8 @@ npx wrangler secret put TURNSTILE_SECRET
 npm run deploy
 ```
 
-- `wrangler.jsonc` 的 `run_worker_first` 必須含 `["/admin", "/admin.html", "/api/*"]`，否則 GET 的 API 會被 `not_found_handling:"404-page"` 當成找不到檔案、回 404，進不了 Worker。
+- R2（後台上傳的圖）：帳號要先在 Cloudflare 後台啟用 R2，再 `npx wrangler r2 bucket create editor-site-media`；`wrangler.jsonc` 的 `r2_buckets` 綁定名稱是 `MEDIA`。本機 `npm run dev` 用的是本機模擬的 R2，跟線上無關。
+- `wrangler.jsonc` 的 `run_worker_first` 必須含 `["/admin", "/admin.html", "/api/*", "/media/*"]`，否則 GET 的 API 與 `/media/*` 會被 `not_found_handling:"404-page"` 當成找不到檔案、回 404，進不了 Worker。
 - `works` 表第一次上線：`npm run db:remote` 建表後，再 `npx wrangler d1 execute editor-site-db --remote --file=./seed-works.sql` 匯入初始資料（`INSERT OR IGNORE`，重跑不會覆蓋後台改過的）。本機把 `--remote` 換成 `--local`。
 - 改了 schema 後，雲端舊表若缺欄位會報 `no such column`。測試資料可直接 `DROP TABLE submissions` 再 `--file=./schema.sql` 重建；要保留資料就用 `ALTER TABLE ... ADD COLUMN`。
 - **CSS/JS 快取**：`_headers` 已對 `/css/*`、`/js/*` 設 `Cache-Control: public, max-age=300, must-revalidate`。改完 CSS/JS 部署後，最多 5 分鐘使用者才拿到新版（不是 cookie 問題，是瀏覽器快取）。要更即時把 300 調小。因此不需要在 HTML 加 `?v=` 版本號。

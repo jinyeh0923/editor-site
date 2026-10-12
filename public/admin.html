@@ -170,6 +170,7 @@
     }
 
     .wform .wide,
+    .wform .wposter,
     .wform .checks,
     .wform .form-actions {
       grid-column: 1 / -1
@@ -218,6 +219,28 @@
       gap: 10px;
       align-items: center;
       flex-wrap: wrap
+    }
+
+    /* 封面圖：預覽 + 上傳按鈕 */
+    .wform .wposter {
+      display: grid;
+      gap: 10px
+    }
+
+    .wform .wupload {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap
+    }
+
+    .wform .wupload img {
+      width: 54px;
+      height: 96px;
+      object-fit: cover;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      background: var(--bg)
     }
 
     /* 作品分類篩選：選了分類就只列那一類，排序也只在那一類裡面排 */
@@ -514,10 +537,18 @@
       <label>觀看數
         <input name="views" type="text" autocomplete="off" maxlength="20" placeholder="12.3萬">
       </label>
-      <label class="wide">封面圖路徑
-        <input name="poster" type="text" autocomplete="off" maxlength="200" placeholder="posters/works/reel-40.jpg">
-        <small>Instagram 作品必填（圖檔要先請開發者放進網站）。YouTube 留空會自動抓縮圖。</small>
-      </label>
+      <div class="wposter">
+        <label>封面圖
+          <input name="poster" type="text" autocomplete="off" maxlength="200" placeholder="按下面的「上傳圖片」，這裡會自動填好">
+          <small>Instagram 作品必填。YouTube 留空會自動抓縮圖。</small>
+        </label>
+        <div class="wupload">
+          <img id="w-poster-prev" alt="" hidden>
+          <input id="w-file" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+          <button type="button" class="abtn" id="w-upload">上傳圖片</button>
+          <span class="note" id="w-upload-note" role="status" aria-live="polite"></span>
+        </div>
+      </div>
       <label>比例
         <select name="ratio">
           <option value="">自動判斷</option>
@@ -963,6 +994,8 @@
       f.visible.checked = w ? !!w.visible : true;
       f.home.checked = w ? !!w.home : false;
       wFormNote.textContent = "";
+      wUploadNote.textContent = "";
+      showPosterPrev();
       note("");
       if (!wDialog.open) wDialog.showModal();
       wDialog.scrollTop = 0;
@@ -978,8 +1011,75 @@
       if (wDialog.open) wFormNote.textContent = err.message;
       else note(err.message, true);
     }
+    /* 封面圖上傳：先在瀏覽器縮到長邊 1280、轉成 JPG（手機截圖動輒好幾 MB，縮完約一兩百 KB），
+       再送到 /api/admin/media，把回來的路徑填進「封面圖」欄。按「儲存」才會真的套用到作品。 */
+    var wFile = document.getElementById("w-file");
+    var wUploadBtn = document.getElementById("w-upload");
+    var wUploadNote = document.getElementById("w-upload-note");
+    var wPosterPrev = document.getElementById("w-poster-prev");
+    var wSave = document.getElementById("w-save");
+    var uploading = false;
+    function showPosterPrev() {
+      var v = wForm.elements.poster.value.trim();
+      var ok = /^(posters|media)\/[\w\-./]+$/.test(v) && v.indexOf("..") < 0;
+      wPosterPrev.hidden = !ok;
+      if (ok) wPosterPrev.src = "/" + v; else wPosterPrev.removeAttribute("src");
+    }
+    wPosterPrev.addEventListener("error", function () { wPosterPrev.hidden = true; });
+    wForm.elements.poster.addEventListener("change", showPosterPrev);
+    function shrink(file) {
+      return createImageBitmap(file).then(function (bmp) {
+        var s = Math.min(1, 1280 / Math.max(bmp.width, bmp.height));
+        var c = document.createElement("canvas");
+        c.width = Math.max(1, Math.round(bmp.width * s));
+        c.height = Math.max(1, Math.round(bmp.height * s));
+        var ctx = c.getContext("2d");
+        ctx.fillStyle = "#0B0B0D"; // 透明背景的 PNG 轉 JPG 時墊深色底
+        ctx.fillRect(0, 0, c.width, c.height);
+        ctx.drawImage(bmp, 0, 0, c.width, c.height);
+        return new Promise(function (resolve, reject) {
+          c.toBlob(function (b) { if (b) resolve(b); else reject(new Error("圖片轉檔失敗")); }, "image/jpeg", 0.85);
+        });
+      }, function () { throw new Error("讀不了這張圖片，請改用 JPG 或 PNG"); });
+    }
+    function uploadNote(text, bad) {
+      wUploadNote.textContent = text || "";
+      wUploadNote.className = bad ? "note bad" : "note";
+    }
+    wUploadBtn.addEventListener("click", function () { if (!uploading) wFile.click(); });
+    wFile.addEventListener("change", function () {
+      var file = wFile.files[0];
+      wFile.value = ""; // 清掉，同一張圖才能再選一次
+      if (!file || uploading) return;
+      uploading = true;
+      wUploadBtn.disabled = wSave.disabled = true; // 上傳完才能儲存，免得存到舊的封面
+      uploadNote("上傳中…");
+      shrink(file)
+        .then(function (blob) {
+          return fetch("/api/admin/media?folder=works", {
+            method: "POST",
+            headers: { "Accept": "application/json", "Content-Type": "image/jpeg" },
+            body: blob
+          });
+        })
+        .then(function (res) {
+          return res.json().catch(function () { return {}; }).then(function (data) {
+            if (!res.ok) throw new Error(data.error || ("錯誤 " + res.status));
+            return data;
+          });
+        })
+        .then(function (data) {
+          wForm.elements.poster.value = data.path;
+          showPosterPrev();
+          uploadNote("已上傳，按「儲存」才會套用");
+        })
+        .catch(function (err) { uploadNote(err.message, true); })
+        .then(function () { uploading = false; wUploadBtn.disabled = wSave.disabled = false; });
+    });
+
     wForm.addEventListener("submit", function (e) {
       e.preventDefault();
+      if (uploading) return;
       var f = wForm.elements;
       var data = { visible: f.visible.checked ? 1 : 0, home: f.home.checked ? 1 : 0 };
       ["url", "cat", "title", "dur", "views", "poster", "ratio", "tag"].forEach(function (k) {
