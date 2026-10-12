@@ -1,6 +1,6 @@
 # HANDOVER — 接續開發說明
 
-> 最後更新：2026-10-08
+> 最後更新：2026-10-12
 > 這份是「下次開工前先看」的狀態紀錄。架構與程式慣例看 `CLAUDE.md`，上線前的內容清單看 `CONTENT-CHECKLIST.md`，這裡不重複。
 
 ---
@@ -15,8 +15,8 @@ git pull
 
 | 電腦 | 路徑 |
 | --- | --- |
-| A | `C:\Users\User\code\editor-site`（本機） |
-| B | `C:\Users\Meow\editor-site` |
+| A（筆電） | `C:\Users\User\code\editor-site` — **開發與部署一律在這台** |
+| B（桌機） | `C:\Users\Meow\editor-site` — 不同步、**不再從這台部署**（程式碼是舊版，部署會蓋掉線上版） |
 
 2026-10-07 踩過一次坑：B 電腦在 7/01–7/02 做了四個 commit 並部署上線，但 A 電腦從沒 `pull`。結果 A 的本機程式碼比線上還舊，差點直接 `deploy` 把線上較新的首頁蓋掉（首頁案例區的資料驅動改版、`home.css` 168 行樣式、`works.js` 整套 id 重新命名）。
 
@@ -28,14 +28,15 @@ git pull
 
 | | 版本 |
 | --- | --- |
-| 本機 `main` | `a3c4794` |
-| GitHub `origin/main` | `a3c4794`（同步） |
+| 本機 `main` | `2946117` |
+| GitHub `origin/main` | `2946117`（同步） |
 | Cloudflare 線上 | `c144f3c4-32bb-430e-9fd1-ad59cb25e9af` |
+| 開發中分支 `feat/works-admin` | `f96f62c`（已 push，未合併、未部署） |
 
 線上網址：https://editor-site.editor-vincent.workers.dev
 GitHub：https://github.com/jinyeh0923/editor-site
 
-工作目錄乾淨，線上與本機 `public/` 逐字元一致。
+`main` 與線上的 `public/` 逐字元一致。**內容後台在 `feat/works-admin` 上開發，10/14 晚上才合併部署，在那之前不要從這個分支部署。**
 
 ### 資料統計
 
@@ -48,6 +49,36 @@ GitHub：https://github.com/jinyeh0923/editor-site
 封面圖   39 張 / 3.68 MB（全部 9:16、全部 <150KB）
 案例     3 則（case-attackline / case-vlab / case-beauty）
 ```
+
+---
+
+## 2026-10-12 這次做了什麼（內容後台第 1 階段：資料層）
+
+規劃與分階段時程見 `作品後台規劃_20261012.md`，設計約束見 `CLAUDE.md` §6.5。今晚只做資料層：**沒碰 `public/`、沒部署、沒動雲端 D1**，前台仍然讀 `works.js`。
+
+### 資料庫
+- `schema.sql` 新增 `works` 表。比規劃檔多一個 `home` 欄位（首頁精選 teaser 的依據）；**不存 `pin`**，置頂改由 `sort_order` 決定
+- `seed-works.sql`（新檔）：`works.js` 的 56 筆原樣轉入，id 不變，`sort_order` 1–56。用 `INSERT OR IGNORE`，重跑不會覆蓋後台改過的資料
+- 只套用到**本機** D1
+
+### API（`src/index.js`）
+| 路由 | 說明 |
+| --- | --- |
+| `GET /api/works` | 公開，只回 `visible=1`，依 `sort_order`，快取 60 秒 |
+| `GET /api/admin/works` | 後台用，含已下架的、所有欄位 |
+| `POST /api/admin/works` | 新增。`id` 可省略，由 url 產生（`yt-<影片代碼>` / `shorts-…` / `reels-…`）；url 為空時必須自己給 id。**新作品排最前面** |
+| `PUT /api/admin/works/:id` | 局部更新（下架只送 `{"visible":0}`）；id 不可變更 |
+| `DELETE /api/admin/works/:id` | 被案例引用時回 409 並列出案例名 |
+| `POST /api/admin/works/reorder` | `{id, dir:"up"\|"down"}`，與相鄰那筆交換 `sort_order` |
+
+- 後台路由都過 Basic Auth；寫入一律要 `Content-Type: application/json`（順便擋 CSRF），否則 415
+- url 只接受 https 的 YouTube / Instagram 作品連結，或空字串（不可點擊）
+- `poster` 限 `posters/` 底下的圖檔路徑；`ratio` 限 `9/16`、`16/9`、`1/1`
+- **刪除前的案例引用檢查**：Worker 用 `env.ASSETS.fetch("/js/cases.js")` 讀檔案文字，regex 抓每個 `works: [...]` 與前面最近的 `name:`。讀不到或解析不出來就回 503 擋下刪除。第 3 階段案例進 D1 後改成直接查詢
+- `wrangler.jsonc` 沒改：`run_worker_first` 原有的 `/api/*` 已涵蓋 `/api/works`
+
+### 驗證
+本機 curl 跑過「新增 → 修改 → 下移 / 上移 → 下架 → 刪除」，每步用 `GET /api/works` 確認；權限與欄位驗證的錯誤情境也都測過。測試資料已刪，本機 D1 回到 56 筆。
 
 ---
 
@@ -83,6 +114,7 @@ npm run deploy     # 部署（account_id 已寫在 wrangler.jsonc，不用再帶
 
 npm run db:local   # 本機套用 schema.sql
 npm run db:remote  # 線上套用 schema.sql
+npx wrangler d1 execute editor-site-db --local --file=./seed-works.sql   # 本機匯入作品初始資料
 
 npx wrangler login              # token 過期時（必須在真正的終端機跑，非互動環境起不來）
 npx wrangler secret put ADMIN_PASSWORD
@@ -143,6 +175,13 @@ npx wrangler deployments list   # 看部署歷史
 - **IG 連結會失效**（帳號關閉、貼文刪除）。遇到就把 `url` 設為 `""`，卡片會自動變成不可點的 `div`，封面與觀看數保留。記得補 `tag`（沒有 url 判不出平台，會標成「影片」）
 - IG 分享連結的 `?stkn=` 是會過期的 token，存進 `works.js` 前先清掉
 
+### 內容後台（開發中，10/14 上線前適用）
+
+- **`seed-works.sql` 是 10/12 當下 `works.js` 的快照。** 上線前如果又改了 `works.js`（新增作品、改觀看數），seed 要重新產生，否則雲端 D1 匯入的是舊資料
+- 刪除檢查靠 `cases.js` 目前的排版（`name:` 在 `works:` 之前、陣列是字串字面值）。大改 `cases.js` 格式後要重測刪除被引用的作品是否仍回 409
+- Windows 的 curl 用 `-d '…中文…'` 會以 cp950 送出，存進去變亂碼。測中文要用 UTF-8 檔案：`--data-binary @body.json`。瀏覽器 `fetch` 不受影響
+- 新作品會排到最前面，把原本置頂的「TPVL 元年紀實」擠下去，要用 ↑ 移回來
+
 ### 版面
 
 - `masonry.js` 會試 6 種排列候選挑欄高最平衡的，**DOM 順序 ≠ 視覺順序**。要固定某張卡在左上角，用 `pin: true`
@@ -152,6 +191,16 @@ npx wrangler deployments list   # 看部署歷史
 
 ## 下次可以接著做的
 
-1. **換掉 admin 密碼**（或接 Cloudflare Access）— 最優先
-2. 把上面 🟡 那批佔位內容補完，就能交給客戶看了
+### 內容後台第 1 階段（10/15 給客戶測試）
+
+1. **10/13（二）後台作品管理頁**：`admin.html` 改分頁結構（來件 / 作品），作品頁一張列表加新增/編輯表單，接上面的 API。完成判斷：在 `/admin` 新增一筆，資料庫裡看得到
+2. **10/14（三）前台改讀 API + 上線**：`works.js` / `cases.js` 的 `workById` / 篩選 / 載入更多 / masonry 初始化改成非同步；`masonry.js` 改有限往前看；fetch 失敗要有空狀態。上線順序照規劃檔第 4 節（先打 tag `pre-works-admin` → 雲端 D1 → 部署）
+   - 順便處理：`workCardHTML` 把 `title` / `poster` / `cat` 直接串進 HTML 沒有跳脫，資料改由後台輸入後，標題有 `"` 或 `<` 會破版，要加跳脫
+   - 首頁 teaser 改讀 API 回傳的 `home`；`pin` 已不存，置頂靠 `sort_order`
+3. 改完 `CLAUDE.md` 後要重新上傳覆蓋 claude.ai 專案知識庫那一份（10/12 加了 §6.5，還沒上傳）
+
+### 其他
+
+1. **換掉 admin 密碼**（或接 Cloudflare Access）— 給客戶後台前一定要換
+2. 把上面 🟡 那批佔位內容補完
 3. 補 `dur` 與重複標題

@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
-  <title>表單後台 — 薯餅</title>
+  <title>後台 — 薯餅</title>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
     href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap"
@@ -37,7 +37,8 @@
       color: var(--accent)
     }
 
-    .admin-head button {
+    .admin-head button,
+    .abtn {
       font-family: var(--fm);
       font-size: 13px;
       color: var(--ink);
@@ -49,9 +50,208 @@
       transition: .2s
     }
 
-    .admin-head button:hover {
+    .admin-head button:hover,
+    .abtn:hover {
       border-color: var(--accent);
       color: var(--accent)
+    }
+
+    .abtn:disabled {
+      opacity: .35;
+      cursor: default;
+      border-color: var(--line);
+      color: var(--ink)
+    }
+
+    /* 分頁：每個資源一頁（來件 / 作品 / 之後的案例、文案） */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 28px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--line)
+    }
+
+    .tabs button {
+      font-family: var(--fm);
+      font-size: 13px;
+      color: var(--muted);
+      background: transparent;
+      border: 1px solid var(--line);
+      padding: 9px 18px;
+      border-radius: var(--pill);
+      cursor: pointer;
+      transition: .2s
+    }
+
+    .tabs button:hover {
+      color: var(--ink)
+    }
+
+    .tabs button.on {
+      color: var(--on-accent);
+      background: var(--accent);
+      border-color: var(--accent)
+    }
+
+    .head-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap
+    }
+
+    .note {
+      font-family: var(--fm);
+      font-size: 13px;
+      color: var(--accent);
+      min-height: 20px;
+      margin: 0 0 14px
+    }
+
+    .note.bad {
+      color: #ff6b6b
+    }
+
+    /* 作品表單（core.css 的 form 是單欄 560px，這裡放寬成兩欄） */
+    .wform {
+      max-width: none;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px 20px;
+      padding: 22px;
+      margin-bottom: 20px;
+      border: 1px solid var(--line);
+      border-radius: var(--r);
+      background: var(--bg-2)
+    }
+
+    /* core.css 的 form / label 是 display:grid，會蓋掉 hidden 屬性 */
+    .wform[hidden],
+    .wform [hidden] {
+      display: none
+    }
+
+    .wform h2 {
+      grid-column: 1 / -1;
+      margin: 0;
+      font-weight: 900;
+      font-size: 20px
+    }
+
+    .wform .wide,
+    .wform .checks,
+    .wform .form-actions {
+      grid-column: 1 / -1
+    }
+
+    /* 同一列兩個欄位高度不同時（一邊有說明文字），輸入框靠上對齊、不被拉高 */
+    .wform label {
+      align-content: start
+    }
+
+    .wform input,
+    .wform select {
+      background-color: var(--bg);
+      min-width: 0
+    }
+
+    .wform small {
+      font-family: var(--f);
+      font-size: 12px;
+      letter-spacing: 0;
+      color: var(--muted-2)
+    }
+
+    .wform .checks {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap
+    }
+
+    .wform .checks label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer
+    }
+
+    .wform input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      padding: 0;
+      accent-color: var(--accent)
+    }
+
+    .wform .form-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap
+    }
+
+    /* 作品列表 */
+    #w-rows td {
+      vertical-align: middle
+    }
+
+    #w-rows tr.off td {
+      opacity: .45
+    }
+
+    #w-rows tr.off td.ops,
+    #w-rows tr.off td.order {
+      opacity: 1
+    }
+
+    #w-rows .order,
+    #w-rows .ops {
+      white-space: nowrap
+    }
+
+    #w-rows .abtn {
+      padding: 6px 12px
+    }
+
+    #w-rows .thumb {
+      display: block;
+      width: 54px;
+      height: 54px;
+      object-fit: cover;
+      border-radius: 6px;
+      background: var(--bg)
+    }
+
+    #w-rows .wtitle {
+      max-width: 34ch;
+      word-break: break-word
+    }
+
+    #w-rows .wid {
+      display: block;
+      font-family: var(--fm);
+      font-size: 12px;
+      color: var(--muted-2)
+    }
+
+    #w-rows .abtn.danger:hover {
+      border-color: #ff6b6b;
+      color: #ff6b6b
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+
+      .tabs button,
+      .abtn,
+      .admin-head button {
+        transition: none
+      }
+    }
+
+    @media (max-width: 640px) {
+      .wform {
+        grid-template-columns: 1fr;
+        padding: 16px
+      }
     }
 
     .tablewrap {
@@ -129,31 +329,124 @@
 </head>
 
 <body>
-  <div class="admin-head">
-    <div>
-      <h1>訪客表單 <span class="count" id="count"></span></h1>
+  <!-- 分頁：新增一個資源 = 加一顆按鈕 + 一個 data-panel 區塊 + 在 script 的 PANELS 登記載入函式 -->
+  <nav class="tabs" id="tabs" aria-label="後台分頁">
+    <button type="button" data-tab="submissions">來件</button>
+    <button type="button" data-tab="works">作品</button>
+  </nav>
+
+  <section data-panel="submissions">
+    <div class="admin-head">
+      <div>
+        <h1>訪客表單 <span class="count" id="count"></span></h1>
+      </div>
+      <button id="refresh" type="button">重新整理</button>
     </div>
-    <button id="refresh" type="button">重新整理</button>
-  </div>
-  <div class="tablewrap">
-    <table>
-      <thead>
-        <tr>
-          <th>時間</th>
-          <th>姓名</th>
-          <th>Email</th>
-          <th>類型</th>
-          <th>狀態</th>
-          <th>內容</th>
-        </tr>
-      </thead>
-      <tbody id="rows">
-        <tr>
-          <td colspan="6" class="empty">載入中…</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th>時間</th>
+            <th>姓名</th>
+            <th>Email</th>
+            <th>類型</th>
+            <th>狀態</th>
+            <th>內容</th>
+          </tr>
+        </thead>
+        <tbody id="rows">
+          <tr>
+            <td colspan="6" class="empty">載入中…</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section data-panel="works" hidden>
+    <div class="admin-head">
+      <div>
+        <h1>作品 <span class="count" id="w-count"></span></h1>
+      </div>
+      <div class="head-actions">
+        <button id="w-new" type="button">新增作品</button>
+        <button id="w-refresh" type="button">重新整理</button>
+      </div>
+    </div>
+    <p class="note" id="w-note" role="status" aria-live="polite"></p>
+
+    <form class="wform" id="w-form" hidden novalidate>
+      <h2 id="w-form-title">新增作品</h2>
+      <label class="wide">作品連結
+        <input name="url" type="text" inputmode="url" autocomplete="off" maxlength="300"
+          placeholder="https://www.instagram.com/reel/… 或 https://youtu.be/…">
+        <small>只接受 YouTube 或 Instagram 的作品連結。留空＝卡片不可點擊。</small>
+      </label>
+      <label>分類
+        <input name="cat" type="text" list="w-cats" autocomplete="off" maxlength="40" required>
+        <small>從清單選現有分類，或直接輸入新的。</small>
+      </label>
+      <label>標題
+        <input name="title" type="text" autocomplete="off" maxlength="120">
+      </label>
+      <label>長度
+        <input name="dur" type="text" autocomplete="off" maxlength="12" placeholder="0:33">
+      </label>
+      <label>觀看數
+        <input name="views" type="text" autocomplete="off" maxlength="20" placeholder="12.3萬">
+      </label>
+      <label class="wide">封面圖路徑
+        <input name="poster" type="text" autocomplete="off" maxlength="200" placeholder="posters/works/reel-40.jpg">
+        <small>Instagram 作品必填（圖檔要先請開發者放進網站）。YouTube 留空會自動抓縮圖。</small>
+      </label>
+      <label>比例
+        <select name="ratio">
+          <option value="">自動判斷</option>
+          <option value="9/16">9:16 直式</option>
+          <option value="16/9">16:9 橫式</option>
+          <option value="1/1">1:1 方形</option>
+        </select>
+      </label>
+      <label>左上角標籤
+        <input name="tag" type="text" autocomplete="off" maxlength="20" placeholder="留空自動（Reels / Shorts / YouTube）">
+      </label>
+      <label class="wide" id="w-id-field">作品 ID
+        <input name="id" type="text" autocomplete="off" maxlength="64" placeholder="留空自動產生">
+        <small>建立後不能修改。有填連結時可以留空；沒有連結的作品必須自己填（英數、連字號、底線）。</small>
+      </label>
+      <div class="checks">
+        <label><input name="visible" type="checkbox" checked> 上架（取消勾選＝先存成下架）</label>
+        <label><input name="home" type="checkbox"> 首頁精選</label>
+      </div>
+      <div class="form-actions">
+        <button type="submit" id="w-save">儲存</button>
+        <button type="button" class="abtn" id="w-cancel">取消</button>
+      </div>
+    </form>
+    <datalist id="w-cats"></datalist>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th>順序</th>
+            <th>封面</th>
+            <th>標題</th>
+            <th>分類</th>
+            <th>長度</th>
+            <th>觀看</th>
+            <th>狀態</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="w-rows">
+          <tr>
+            <td colspan="8" class="empty">載入中…</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
 
   <script>
     var rows = document.getElementById("rows");
@@ -213,7 +506,262 @@
         });
     }
     document.getElementById("refresh").addEventListener("click", load);
-    load();
+
+    /* ---------- 作品 ---------- */
+    var wRows = document.getElementById("w-rows");
+    var wCount = document.getElementById("w-count");
+    var wNote = document.getElementById("w-note");
+    var wForm = document.getElementById("w-form");
+    var wFormTitle = document.getElementById("w-form-title");
+    var wIdField = document.getElementById("w-id-field");
+    var wCats = document.getElementById("w-cats");
+    var works = [];
+    var editingId = null; // null＝新增
+    var busy = false;
+
+    function note(text, bad) {
+      wNote.textContent = text || "";
+      wNote.className = bad ? "note bad" : "note";
+    }
+    // 後台 API 共用：一律 JSON；失敗時丟出伺服器回的 error 訊息
+    function api(method, path, body) {
+      var opt = { method: method, headers: { "Accept": "application/json" } };
+      if (body !== undefined) {
+        opt.headers["Content-Type"] = "application/json";
+        opt.body = JSON.stringify(body);
+      }
+      return fetch(path, opt).then(function (res) {
+        return res.json().catch(function () { return {}; }).then(function (data) {
+          if (!res.ok) throw new Error(data.error || ("錯誤 " + res.status));
+          return data;
+        });
+      });
+    }
+    // 送出期間鎖住所有操作，避免連點造成順序錯亂
+    function run(promise, okText) {
+      if (busy) return;
+      busy = true;
+      document.body.style.cursor = "progress";
+      return promise
+        .then(function (r) { if (okText) note(okText); return r; })
+        .catch(function (err) { note(err.message, true); })
+        .then(function () { busy = false; document.body.style.cursor = ""; });
+    }
+
+    function thumbSrc(w) {
+      if (w.poster) return "/" + w.poster;
+      var yt = (w.url || "").match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/))([\w-]{6,})/);
+      return yt ? "https://img.youtube.com/vi/" + yt[1] + "/hqdefault.jpg" : "";
+    }
+    function btn(text, label, onClick, cls) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "abtn" + (cls ? " " + cls : "");
+      b.textContent = text;
+      if (label) b.setAttribute("aria-label", label);
+      b.addEventListener("click", onClick);
+      return b;
+    }
+
+    function renderWorks() {
+      var shown = works.filter(function (w) { return w.visible; }).length;
+      wCount.textContent = "（" + works.length + " 筆，上架 " + shown + "）";
+      wRows.innerHTML = "";
+      if (!works.length) {
+        wRows.innerHTML = '<tr><td colspan="8" class="empty">目前沒有作品</td></tr>';
+        return;
+      }
+      works.forEach(function (w, i) {
+        var name = w.title || "（無標題）";
+        var tr = document.createElement("tr");
+        if (!w.visible) tr.className = "off";
+
+        var tdOrder = document.createElement("td");
+        tdOrder.className = "order";
+        var up = btn("↑", "上移：" + name, function () { move(w.id, "up"); });
+        var down = btn("↓", "下移：" + name, function () { move(w.id, "down"); });
+        up.disabled = i === 0;
+        down.disabled = i === works.length - 1;
+        tdOrder.appendChild(up);
+        tdOrder.appendChild(document.createTextNode(" "));
+        tdOrder.appendChild(down);
+        tr.appendChild(tdOrder);
+
+        var tdThumb = document.createElement("td");
+        var src = thumbSrc(w);
+        if (src) {
+          var img = document.createElement("img");
+          img.className = "thumb";
+          img.loading = "lazy";
+          img.alt = "";
+          img.onerror = function () { this.style.visibility = "hidden"; };
+          img.src = src;
+          tdThumb.appendChild(img);
+        }
+        tr.appendChild(tdThumb);
+
+        // 標題：有連結就可點去平台確認；文字一律 textContent
+        var tdTitle = document.createElement("td");
+        tdTitle.className = "wtitle";
+        if (w.url && /^https:\/\//.test(w.url)) {
+          var a = document.createElement("a");
+          a.href = w.url;
+          a.target = "_blank";
+          a.rel = "noopener noreferrer";
+          a.textContent = name;
+          tdTitle.appendChild(a);
+        } else {
+          tdTitle.appendChild(document.createTextNode(name));
+        }
+        var idEl = document.createElement("span");
+        idEl.className = "wid";
+        idEl.textContent = w.id;
+        tdTitle.appendChild(idEl);
+        tr.appendChild(tdTitle);
+
+        tr.appendChild(cell(w.cat));
+        tr.appendChild(cell(w.dur));
+        tr.appendChild(cell(w.views));
+
+        var tdState = document.createElement("td");
+        var st = document.createElement("span");
+        st.className = "tag";
+        st.textContent = w.visible ? "上架中" : "已下架";
+        tdState.appendChild(st);
+        if (w.home) {
+          var hm = document.createElement("span");
+          hm.className = "tag";
+          hm.textContent = "首頁精選";
+          tdState.appendChild(document.createTextNode(" "));
+          tdState.appendChild(hm);
+        }
+        tr.appendChild(tdState);
+
+        var tdOps = document.createElement("td");
+        tdOps.className = "ops";
+        tdOps.appendChild(btn("編輯", "編輯：" + name, function () { openForm(w); }));
+        tdOps.appendChild(document.createTextNode(" "));
+        tdOps.appendChild(btn(w.visible ? "下架" : "上架", (w.visible ? "下架：" : "上架：") + name, function () { toggle(w); }));
+        tdOps.appendChild(document.createTextNode(" "));
+        tdOps.appendChild(btn("刪除", "刪除：" + name, function () { remove(w); }, "danger"));
+        tr.appendChild(tdOps);
+
+        wRows.appendChild(tr);
+      });
+
+      // 分類建議清單：現有作品用過的分類
+      var seen = {};
+      wCats.innerHTML = "";
+      works.forEach(function (w) {
+        if (!w.cat || seen[w.cat]) return;
+        seen[w.cat] = 1;
+        var o = document.createElement("option");
+        o.value = w.cat;
+        wCats.appendChild(o);
+      });
+    }
+
+    function fetchWorks() {
+      return api("GET", "/api/admin/works").then(function (list) { works = list; renderWorks(); });
+    }
+    function loadWorks() {
+      wRows.innerHTML = '<tr><td colspan="8" class="empty">載入中…</td></tr>';
+      note("");
+      fetchWorks().catch(function (err) {
+        wRows.innerHTML = '<tr><td colspan="8" class="err"></td></tr>';
+        wRows.querySelector(".err").textContent = "讀取失敗（" + err.message + "）。請重新整理或重新登入。";
+        wCount.textContent = "";
+      });
+    }
+
+    function move(id, dir) {
+      run(api("POST", "/api/admin/works/reorder", { id: id, dir: dir }).then(fetchWorks));
+    }
+    function toggle(w) {
+      run(
+        api("PUT", "/api/admin/works/" + encodeURIComponent(w.id), { visible: w.visible ? 0 : 1 }).then(fetchWorks),
+        (w.visible ? "已下架：" : "已上架：") + (w.title || w.id)
+      );
+    }
+    function remove(w) {
+      if (busy) return;
+      if (!confirm("確定刪除「" + (w.title || w.id) + "」？刪除後無法復原。\n只是暫時不想顯示的話，請改用「下架」。")) return;
+      if (editingId === w.id) closeForm();
+      run(
+        api("DELETE", "/api/admin/works/" + encodeURIComponent(w.id)).then(fetchWorks),
+        "已刪除：" + (w.title || w.id)
+      );
+    }
+
+    function openForm(w) {
+      editingId = w ? w.id : null;
+      wFormTitle.textContent = w ? "編輯作品（" + w.id + "）" : "新增作品";
+      wIdField.hidden = !!w; // id 建立後不可變更，編輯時不顯示
+      var f = wForm.elements;
+      ["url", "cat", "title", "dur", "views", "poster", "ratio", "tag"].forEach(function (k) {
+        f[k].value = (w && w[k]) || "";
+      });
+      f.id.value = "";
+      f.visible.checked = w ? !!w.visible : true;
+      f.home.checked = w ? !!w.home : false;
+      wForm.hidden = false;
+      note("");
+      wForm.scrollIntoView({ block: "start" });
+      f.url.focus({ preventScroll: true });
+    }
+    function closeForm() {
+      wForm.hidden = true;
+      editingId = null;
+    }
+    wForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var f = wForm.elements;
+      var data = { visible: f.visible.checked ? 1 : 0, home: f.home.checked ? 1 : 0 };
+      ["url", "cat", "title", "dur", "views", "poster", "ratio", "tag"].forEach(function (k) {
+        data[k] = f[k].value.trim();
+      });
+      if (!data.cat) { note("請填分類", true); f.cat.focus(); return; }
+      var req;
+      if (editingId) {
+        req = api("PUT", "/api/admin/works/" + encodeURIComponent(editingId), data);
+      } else {
+        if (f.id.value.trim()) data.id = f.id.value.trim();
+        req = api("POST", "/api/admin/works", data);
+      }
+      var wasEdit = !!editingId;
+      run(
+        req.then(function (saved) {
+          closeForm();
+          return fetchWorks().then(function () { return saved; });
+        }),
+        wasEdit ? "已儲存" : "已新增，排在最前面"
+      );
+    });
+    document.getElementById("w-cancel").addEventListener("click", closeForm);
+    document.getElementById("w-new").addEventListener("click", function () { openForm(null); });
+    document.getElementById("w-refresh").addEventListener("click", loadWorks);
+
+    /* ---------- 分頁 ---------- */
+    var PANELS = { submissions: load, works: loadWorks }; // 分頁名 → 第一次開啟時的載入函式
+    var loaded = {};
+    function showTab(name) {
+      if (!PANELS[name]) name = "submissions";
+      document.querySelectorAll("[data-panel]").forEach(function (p) {
+        p.hidden = p.getAttribute("data-panel") !== name;
+      });
+      document.querySelectorAll("#tabs button").forEach(function (b) {
+        var on = b.getAttribute("data-tab") === name;
+        b.classList.toggle("on", on);
+        if (on) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
+      });
+      if (!loaded[name]) { loaded[name] = true; PANELS[name](); }
+      history.replaceState(null, "", "#" + name);
+    }
+    document.getElementById("tabs").addEventListener("click", function (e) {
+      var b = e.target.closest("button[data-tab]");
+      if (b) showTab(b.getAttribute("data-tab"));
+    });
+    showTab(location.hash.slice(1));
   </script>
 </body>
 
