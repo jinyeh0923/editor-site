@@ -197,6 +197,7 @@ npx wrangler deployments list   # 看部署歷史
 
 - [x] 後台作品管理頁：`admin.html` 分頁（來件 / 作品），列表 + 新增/編輯表單、↑↓、上下架、刪除
 - [x] 後台排序：拖拉把手（拖到視窗邊緣會自動捲動）、每列編號可直接改、↑↓。都走 `POST /api/admin/works/reorder` 的 `{ids:[…]}`（整份順序，`sort_order` 重編 1..N；清單與資料庫對不上回 409）。**觸控裝置不能拖拉**（瀏覽器原生拖放不支援），手機用改編號或 ↑↓
+- [x] 後台新增 / 編輯表單是跳窗（原生 `<dialog>`，`#w-dialog`）：Esc、取消、存檔成功都會關，點背景不關（避免誤觸弄丟內容）；表單錯誤顯示在跳窗內的 `#w-form-note`，存檔成功的訊息顯示在列表上方。開關跳窗不會改變列表的捲動位置
 - [x] 前台改讀 `/api/works`：
   - `works.js` 不再放作品資料，改成 `loadWorks()`；`fetchJSON` / `renderWhenLoaded` 是「fetch 後渲染」的共用函式，案例之後直接套用
   - `workCardHTML` 所有欄位都過 `escHTML`

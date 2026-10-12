@@ -149,6 +149,16 @@ package.json          scripts: dev / deploy / db:local / db:remote
 - 空欄位（如待定案例的空 `follows`/`highlights`/`logo`）要優雅省略、不破版。
 - 數字（follows / metrics）都是**手填**、集中在 `cases.js`，客戶要改就改這一個檔。
 
+### 後台 → `admin.html`（樣式與 script 都內聯在這一支）
+
+- **分頁結構**：上方 `#tabs` 的按鈕對應 `<section data-panel="…">`，網址 hash 記住目前分頁（`/admin#works`）。新增一個資源 = 加一顆按鈕 + 一個 `data-panel` 區塊 + 在 script 的 `PANELS` 登記載入函式（第一次切到該頁才載入）。
+- **作品頁**：一張列表，每列有排序、封面、標題（可點去平台）+ id、分類、長度、觀看、狀態、操作（編輯 / 上架或下架 / 刪除）。下架的列變淡。
+- **排序三種方式，都呼叫 `moveTo(id, 位置)`**：拖拉左邊的把手（拖到視窗上下緣會自動捲動）、直接改編號後按 Enter、↑↓。畫面先更新，再把整份順序送 `POST /api/admin/works/reorder` 的 `{ids}`；失敗就重抓。**觸控裝置不能拖拉**（瀏覽器原生拖放不支援），手機靠改編號或 ↑↓。
+- **新增 / 編輯表單是跳窗**（原生 `<dialog id="w-dialog">`，`showModal()`）：兩者共用同一張表單，編輯時隱藏「作品 ID」欄。Esc、取消、存檔成功會關；**點背景不關**（避免誤觸弄丟輸入）。之後案例、文案的表單比照用跳窗。
+- **訊息位置**：表單的錯誤顯示在跳窗內（`#w-form-note`）；存檔成功與列表操作的結果顯示在列表上方（`#w-note`）。API 錯誤直接顯示伺服器回的中文 `error`。
+- 送出期間用 `run()` 鎖住所有操作（`busy`），避免連點造成順序錯亂。
+- 使用者與後台輸入的資料一律用 `createElement` + `textContent` 渲染，不要串 HTML 字串。
+
 ### 表單（首頁聯絡區 + contact.html，兩處要一致）
 
 - 欄位：姓名、Email、影片類型（`<select name="video_type">`，選項白名單見 Worker）、需求內容、蜜罐 `website`（隱藏）、**個資同意 checkbox**、**Turnstile widget**。
@@ -176,10 +186,10 @@ package.json          scripts: dev / deploy / db:local / db:remote
 
 目標：讓客戶（薯餅）在 /admin 自己管理內容。**內容由客戶改，版型設計由開發者改**，後台不做任何版面編輯功能。
 
-狀態：第 1 階段已實作（作品 API、後台作品頁含拖拉排序、前台改讀 API、masonry 有限往前看）；第 2–4 階段未開始。
+狀態：第 1 階段已實作（作品 API、後台作品頁含拖拉排序與跳窗表單、前台改讀 API、masonry 有限往前看）；第 2–4 階段未開始。
 
 分階段（依序做，每階段完成才開下一階段）：
-1. 作品管理：works 搬進 D1，後台可新增/編輯/刪除/上下架/排序（↑↓ 按鈕交換相鄰 sort_order）。IG 封面暫時手填路徑。
+1. 作品管理：works 搬進 D1，後台可新增/編輯/刪除/上下架/排序（拖拉、改編號、↑↓，見 §5「後台」）。IG 封面暫時手填路徑。
 2. R2 圖片上傳：作品封面、案例 logo、本人照片共用，經 Worker `/media/*` 同網域輸出。
 3. 案例管理：cases.js 搬進 D1，代表作從作品清單勾選。
 4. 文案：site_settings key-value 表，只開放白名單欄位（如關於剪輯者、stats、Showreel ID），用 Worker HTMLRewriter 伺服器端注入（保 SEO），不用前端 fetch。
