@@ -193,11 +193,20 @@ npx wrangler deployments list   # 看部署歷史
 
 ### 內容後台第 1 階段（10/15 給客戶測試）
 
-1. **10/13（二）後台作品管理頁**：`admin.html` 改分頁結構（來件 / 作品），作品頁一張列表加新增/編輯表單，接上面的 API。完成判斷：在 `/admin` 新增一筆，資料庫裡看得到
-2. **10/14（三）前台改讀 API + 上線**：`works.js` / `cases.js` 的 `workById` / 篩選 / 載入更多 / masonry 初始化改成非同步；`masonry.js` 改有限往前看；fetch 失敗要有空狀態。上線順序照規劃檔第 4 節（先打 tag `pre-works-admin` → 雲端 D1 → 部署）
-   - 順便處理：`workCardHTML` 把 `title` / `poster` / `cat` 直接串進 HTML 沒有跳脫，資料改由後台輸入後，標題有 `"` 或 `<` 會破版，要加跳脫
-   - 首頁 teaser 改讀 API 回傳的 `home`；`pin` 已不存，置頂靠 `sort_order`
-3. 改完 `CLAUDE.md` 後要重新上傳覆蓋 claude.ai 專案知識庫那一份（10/12 加了 §6.5，還沒上傳）
+10/12 當晚超前做完了後台頁與前台，**程式都在 `feat/works-admin`，只在本機測過，還沒部署**：
+
+- [x] 後台作品管理頁：`admin.html` 分頁（來件 / 作品），列表 + 新增/編輯表單、↑↓、上下架、刪除
+- [x] 後台排序：拖拉把手（拖到視窗邊緣會自動捲動）、每列編號可直接改、↑↓。都走 `POST /api/admin/works/reorder` 的 `{ids:[…]}`（整份順序，`sort_order` 重編 1..N；清單與資料庫對不上回 409）。**觸控裝置不能拖拉**（瀏覽器原生拖放不支援），手機用改編號或 ↑↓
+- [x] 前台改讀 `/api/works`：
+  - `works.js` 不再放作品資料，改成 `loadWorks()`；`fetchJSON` / `renderWhenLoaded` 是「fetch 後渲染」的共用函式，案例之後直接套用
+  - `workCardHTML` 所有欄位都過 `escHTML`
+  - `app.js` 開出 `window.revealIn(root)`，讓晚渲染的區塊接上 `.reveal` 進場動畫
+  - `masonry.js` 改有限往前看（`LOOKAHEAD = 3`），不再有 6 種候選排列與 `data-pin`
+  - API 失敗時：作品牆顯示一行訊息；案例照樣顯示，只是沒有代表作
+  - `scripts/gen-seed-works.cjs`：從舊版 `works.js` 產生 seed 的腳本（用法：`git show main:public/js/works.js > tmp.js && node scripts/gen-seed-works.cjs tmp.js seed-works.sql`）
+- [ ] **10/14（三）上線**，照規劃檔第 4 節的順序：本機三種寬度再看一輪 → `git tag pre-works-admin` → 雲端 D1 套 `schema.sql` 與 `seed-works.sql` → 合併、部署 → 用線上網址重跑一遍。出問題 `npx wrangler rollback`
+- [ ] `CLAUDE.md` 的 §2（script 載入順序）、§5（作品資料、masonry、`pin`）還是舊描述，要改成現況；改完重新上傳覆蓋 claude.ai 專案知識庫那一份（10/12 加的 §6.5 也還沒上傳）
+- [ ] 開工前地雷：上面「版面」小節寫的「masonry 試 6 種排列」「`pin: true`」已不適用
 
 ### 其他
 
