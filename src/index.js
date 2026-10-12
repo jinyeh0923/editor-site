@@ -1,5 +1,6 @@
 // Cloudflare Worker 進入點。
-// 1) 收表單寫進 D1（含驗證）  2) 後台資料 JSON API  3) 後台頁面 admin.html（需登入）  4) 其餘靜態檔。
+// 1) 收表單寫進 D1（含驗證）  2) 後台資料 JSON API  3) 後台頁面 admin.html（需登入）
+// 4) 作品 works：公開讀取 + 後台增刪改排序  5) 其餘靜態檔。
 
 const LIMITS = { name: 100, email: 254, message: 5000 };
 const VIDEO_TYPES = [
@@ -10,6 +11,11 @@ const VIDEO_TYPES = [
   "都想了解",
 ];
 
+const WORK_LIMITS = { url: 300, cat: 40, title: 120, role: 60, dur: 12, views: 20, poster: 200, ratio: 5, tag: 20 };
+const WORK_RATIOS = ["9/16", "16/9", "1/1"];
+const WORK_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
+const POSTER_RE = /^posters\/[\w\-./]+\.(jpe?g|png|webp|avif)$/i;
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -19,6 +25,13 @@ export default {
     }
     if (url.pathname === "/api/admin/submissions") {
       return handleAdminData(request, env);
+    }
+    // 內容後台（CLAUDE.md §6.5）：公開讀取 /api/<資源>，後台 /api/admin/<資源>
+    if (url.pathname === "/api/works") {
+      return handlePublicWorks(request, env);
+    }
+    if (url.pathname === "/api/admin/works" || url.pathname.startsWith("/api/admin/works/")) {
+      return handleAdminWorks(request, env, url);
     }
     // 後台頁面：先過 Basic Auth，再交出設計好的 admin.html
     // 注意：要抓「不帶 .html」的 /admin，否則資源層會把 /admin.html 轉址回 /admin → 無限迴圈
@@ -90,7 +103,260 @@ async function handleAdminData(request, env) {
   });
 }
 
+// ---- 作品 works ----
+async function handlePublicWorks(request, env) {
+  if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
+  const { results } = await env.DB.prepare(
+    "SELECT id, url, cat, title, role, dur, views, poster, ratio, tag, home FROM works WHERE visible = 1 ORDER BY sort_order, id"
+  ).all();
+  return Response.json(results, {
+    headers: {
+      "Cache-Control": "public, max-age=60",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+}
+
+async function handleAdminWorks(request, env, url) {
+  if (!authed(request, env)) return needAuth();
+  const method = request.method;
+  // /api/admin/works → ""；/api/admin/works/<id> → "<id>"
+  let rest;
+  try { rest = decodeURIComponent(url.pathname.slice("/api/admin/works".length).replace(/^\//, "")); }
+  catch { return json({ error: "bad request" }, 400); }
+
+  if (rest === "") {
+    if (method === "GET") return listWorks(env);
+    if (method === "POST") return createWork(request, env);
+    return json({ error: "method not allowed" }, 405);
+  }
+  if (rest === "reorder") {
+    if (method === "POST") return reorderWork(request, env);
+    return json({ error: "method not allowed" }, 405);
+  }
+  if (!WORK_ID_RE.test(rest)) return json({ error: "找不到這筆作品" }, 404);
+  if (method === "PUT") return updateWork(request, env, rest);
+  if (method === "DELETE") return deleteWork(request, env, rest);
+  return json({ error: "method not allowed" }, 405);
+}
+
+async function listWorks(env) {
+  const { results } = await env.DB.prepare("SELECT * FROM works ORDER BY sort_order, id").all();
+  return json(results);
+}
+
+async function createWork(request, env) {
+  const body = await readJson(request);
+  if (body.error) return json({ error: body.error }, body.status);
+
+  const v = validateWork(body.data, {});
+  if (v.error) return json({ error: v.error }, 400);
+  const w = v.work;
+
+  let id = body.data.id == null ? "" : String(body.data.id).trim();
+  if (!id) id = idFromUrl(w.url);
+  if (!id) return json({ error: "沒有連結的作品必須自己填 id" }, 400);
+  // "reorder" 是 /api/admin/works/reorder 的路徑，不能當 id
+  if (!WORK_ID_RE.test(id) || id === "reorder") {
+    return json({ error: "id 只能用英數、連字號、底線，最多 64 字" }, 400);
+  }
+
+  const dup = await env.DB.prepare("SELECT id FROM works WHERE id = ?").bind(id).first();
+  if (dup) return json({ error: "這個 id 已經存在：" + id }, 409);
+
+  // 新作品排最前面：目前最小的 sort_order 再減 1
+  const now = new Date().toISOString();
+  await env.DB.prepare(
+    `INSERT INTO works (id, url, cat, title, role, dur, views, poster, ratio, tag, home, sort_order, visible, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT COALESCE(MIN(sort_order), 1) - 1 FROM works), ?, ?, ?)`
+  ).bind(id, w.url, w.cat, w.title, w.role, w.dur, w.views, w.poster, w.ratio, w.tag, w.home, w.visible, now, now).run();
+
+  return json(await env.DB.prepare("SELECT * FROM works WHERE id = ?").bind(id).first(), 201);
+}
+
+// 只更新有送來的欄位（例如下架只送 { visible: 0 }）；id 不可變更
+async function updateWork(request, env, id) {
+  const body = await readJson(request);
+  if (body.error) return json({ error: body.error }, body.status);
+  if (body.data.id != null && String(body.data.id) !== id) {
+    return json({ error: "id 不可變更" }, 400);
+  }
+
+  const cur = await env.DB.prepare("SELECT * FROM works WHERE id = ?").bind(id).first();
+  if (!cur) return json({ error: "找不到這筆作品" }, 404);
+
+  const v = validateWork(body.data, cur);
+  if (v.error) return json({ error: v.error }, 400);
+  const w = v.work;
+
+  await env.DB.prepare(
+    `UPDATE works SET url = ?, cat = ?, title = ?, role = ?, dur = ?, views = ?, poster = ?, ratio = ?, tag = ?,
+     home = ?, visible = ?, updated_at = ? WHERE id = ?`
+  ).bind(w.url, w.cat, w.title, w.role, w.dur, w.views, w.poster, w.ratio, w.tag, w.home, w.visible, new Date().toISOString(), id).run();
+
+  return json(await env.DB.prepare("SELECT * FROM works WHERE id = ?").bind(id).first());
+}
+
+async function deleteWork(request, env, id) {
+  const cur = await env.DB.prepare("SELECT id FROM works WHERE id = ?").bind(id).first();
+  if (!cur) return json({ error: "找不到這筆作品" }, 404);
+
+  // 被案例當代表作的作品不能刪（否則案例頁會少一張卡）
+  const refs = await caseRefs(request, env);
+  if (!refs) return json({ error: "無法確認案例引用（讀不到或解析不了 cases.js），為安全起見不刪除" }, 503);
+  const usedBy = refs.filter((c) => c.works.includes(id)).map((c) => c.name);
+  if (usedBy.length) {
+    return json({ error: "這筆作品被案例使用中，請先從案例移除：" + usedBy.join("、"), cases: usedBy }, 409);
+  }
+
+  await env.DB.prepare("DELETE FROM works WHERE id = ?").bind(id).run();
+  return json({ ok: true, id });
+}
+
+// 案例目前還在前端的 public/js/cases.js（第 3 階段搬進 D1 後，這裡改成直接查詢）。
+// 做法：讀檔案文字，抓每個 `works: [...]` 與它前面最近的 `name: "..."`。
+// 依賴 cases.js 現有寫法（name 在 works 之前、陣列是字串字面值）；被註解掉的 id 也算引用（偏保守）。
+// 讀不到或一個都解析不出來 → 回 null，由呼叫端擋下刪除。
+async function caseRefs(request, env) {
+  let text;
+  try {
+    const r = await env.ASSETS.fetch(new Request(new URL("/js/cases.js", request.url)));
+    if (!r.ok) return null;
+    text = await r.text();
+  } catch {
+    return null;
+  }
+  const refs = [];
+  const re = /\bworks:\s*\[([^\]]*)\]/g;
+  let m, from = 0;
+  while ((m = re.exec(text))) {
+    const names = [...text.slice(from, m.index).matchAll(/\bname:\s*(["'])(.*?)\1/g)];
+    refs.push({
+      name: names.length ? names[names.length - 1][2] : "（未命名案例）",
+      works: [...m[1].matchAll(/["']([^"']+)["']/g)].map((x) => x[1]),
+    });
+    from = re.lastIndex;
+  }
+  return refs.length ? refs : null;
+}
+
+// ↑↓：與相鄰那筆交換 sort_order（相鄰＝後台列表的順序，含已下架的）
+async function reorderWork(request, env) {
+  const body = await readJson(request);
+  if (body.error) return json({ error: body.error }, body.status);
+  const id = String(body.data.id || "");
+  const dir = body.data.dir;
+  if (dir !== "up" && dir !== "down") return json({ error: "dir 必須是 up 或 down" }, 400);
+
+  const cur = await env.DB.prepare("SELECT id, sort_order FROM works WHERE id = ?").bind(id).first();
+  if (!cur) return json({ error: "找不到這筆作品" }, 404);
+
+  const other = await env.DB.prepare(
+    dir === "up"
+      ? "SELECT id, sort_order FROM works WHERE sort_order < ? ORDER BY sort_order DESC LIMIT 1"
+      : "SELECT id, sort_order FROM works WHERE sort_order > ? ORDER BY sort_order ASC LIMIT 1"
+  ).bind(cur.sort_order).first();
+  if (!other) return json({ ok: true, moved: false }); // 已經在最前 / 最後
+
+  // batch＝同一個交易，不會只換到一半
+  const now = new Date().toISOString();
+  const set = "UPDATE works SET sort_order = ?, updated_at = ? WHERE id = ?";
+  await env.DB.batch([
+    env.DB.prepare(set).bind(other.sort_order, now, cur.id),
+    env.DB.prepare(set).bind(cur.sort_order, now, other.id),
+  ]);
+  return json({ ok: true, moved: true, swapped_with: other.id });
+}
+
+// 把送來的欄位疊在現有資料（新增時為空物件）上再整筆驗證
+function validateWork(input, cur) {
+  const pick = (k) => (input[k] !== undefined ? input[k] : cur[k]);
+  const w = {};
+  for (const k of ["url", "cat", "title", "role", "dur", "views", "poster", "ratio", "tag"]) {
+    const raw = pick(k);
+    const s = raw == null ? "" : String(raw).trim();
+    if (s.length > WORK_LIMITS[k]) return { error: k + " 太長（上限 " + WORK_LIMITS[k] + " 字）" };
+    w[k] = s;
+  }
+  if (!w.cat) return { error: "缺少分類 cat" };
+  if (w.url && !parseWorkUrl(w.url)) return { error: "url 只接受 YouTube 或 Instagram 的作品連結（https）" };
+  if (w.poster && (!POSTER_RE.test(w.poster) || w.poster.includes(".."))) {
+    return { error: "poster 必須是 posters/ 底下的圖檔路徑" };
+  }
+  if (w.ratio && !WORK_RATIOS.includes(w.ratio)) return { error: "ratio 只能是 " + WORK_RATIOS.join("、") };
+
+  for (const k of ["home", "visible"]) {
+    const raw = pick(k);
+    const def = k === "visible" ? 1 : 0;
+    if (raw === undefined || raw === null) w[k] = def;
+    else if (raw === true || raw === 1) w[k] = 1;
+    else if (raw === false || raw === 0) w[k] = 0;
+    else return { error: k + " 只能是 0 / 1" };
+  }
+  // url 是 NOT NULL（空字串＝不可點擊）；其他選填欄位空的存 NULL
+  for (const k of ["title", "role", "dur", "views", "poster", "ratio", "tag"]) {
+    if (!w[k]) w[k] = null;
+  }
+  return { work: w };
+}
+
+// 只認 https 的 YouTube / Instagram 作品連結，回傳平台與影片代碼；不符回 null
+// （比對規則與 public/js/works.js 的 parseWork 一致）
+function parseWorkUrl(s) {
+  let u;
+  try { u = new URL(s); } catch { return null; }
+  if (u.protocol !== "https:") return null;
+  const host = u.hostname.replace(/^(www|m)\./, "");
+  let m;
+  if (host === "youtu.be") {
+    m = u.pathname.match(/^\/([\w-]{6,})/);
+    return m ? { prefix: "yt", code: m[1] } : null;
+  }
+  if (host === "youtube.com") {
+    if ((m = u.pathname.match(/^\/shorts\/([\w-]{6,})/))) return { prefix: "shorts", code: m[1] };
+    if ((m = u.pathname.match(/^\/embed\/([\w-]{6,})/))) return { prefix: "yt", code: m[1] };
+    const vid = u.pathname === "/watch" ? u.searchParams.get("v") || "" : "";
+    return /^[\w-]{6,}$/.test(vid) ? { prefix: "yt", code: vid } : null;
+  }
+  if (host === "instagram.com") {
+    m = u.pathname.match(/^\/(reels?|p|tv)\/([\w-]+)/);
+    return m ? { prefix: m[1] === "p" || m[1] === "tv" ? "ig" : "reels", code: m[2] } : null;
+  }
+  return null;
+}
+// 沒填 id 時用影片代碼產生（同一支影片重複新增會撞 id 被擋下）
+function idFromUrl(s) {
+  const p = s ? parseWorkUrl(s) : null;
+  return p ? p.prefix + "-" + p.code : "";
+}
+
 // ---- helpers ----
+function json(data, status = 200) {
+  return Response.json(data, {
+    status,
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+      "Referrer-Policy": "no-referrer",
+    },
+  });
+}
+// 後台寫入一律收 JSON。要求 Content-Type 是 application/json：
+// 跨站表單送不出這個型別（會先被 CORS preflight 擋下），順便防 CSRF。
+async function readJson(request) {
+  if (!(request.headers.get("content-type") || "").toLowerCase().startsWith("application/json")) {
+    return { error: "Content-Type 必須是 application/json", status: 415 };
+  }
+  const len = Number(request.headers.get("content-length") || 0);
+  if (len > 16 * 1024) return { error: "payload too large", status: 413 };
+  let data;
+  try { data = await request.json(); }
+  catch { return { error: "JSON 格式錯誤", status: 400 }; }
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return { error: "JSON 格式錯誤", status: 400 };
+  }
+  return { data };
+}
 async function verifyTurnstile(token, secret, ip) {
   if (!token) return false;
   const body = new FormData();

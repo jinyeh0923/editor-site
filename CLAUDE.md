@@ -154,6 +154,23 @@ package.json          scripts: dev / deploy / db:local / db:remote
 - 其餘 → 靜態資源。
   安全：所有寫入用參數化 `.bind()`（防 SQLi）；後台 `admin.html` 用 `textContent` 渲染使用者資料（防 XSS）；密碼比對用常數時間 `safeEqual`；`ADMIN_PASSWORD`、`TURNSTILE_SECRET` 放 secret，不進程式碼。
 
+## 6.5 內容後台（進行中）
+
+目標：讓客戶（薯餅）在 /admin 自己管理內容。**內容由客戶改，版型設計由開發者改**，後台不做任何版面編輯功能。
+
+分階段（依序做，每階段完成才開下一階段）：
+1. 作品管理：works 搬進 D1，後台可新增/編輯/刪除/上下架/排序（↑↓ 按鈕交換相鄰 sort_order）。IG 封面暫時手填路徑。
+2. R2 圖片上傳：作品封面、案例 logo、本人照片共用，經 Worker `/media/*` 同網域輸出。
+3. 案例管理：cases.js 搬進 D1，代表作從作品清單勾選。
+4. 文案：site_settings key-value 表，只開放白名單欄位（如關於剪輯者、stats、Showreel ID），用 Worker HTMLRewriter 伺服器端注入（保 SEO），不用前端 fetch。
+
+設計約束：
+- API 統一命名 `/api/admin/<資源>`（works / cases / settings）；公開讀取用 `/api/<資源>`。
+- admin.html 做成分頁結構，每個資源一頁，新增階段 = 加一頁。
+- 前台「fetch 後渲染」抽成共用函式，案例頁之後直接套用。
+- 客戶要自己排序作品 → masonry.js 改為「有限往前看」（只從接下來 2–3 張挑卡補洞），盡量保持排序；不再用全域貪婪填補。
+- Cloudflare 資源維持在開發者帳號，客戶只用網站後台密碼登入。
+
 ## 7. 部署（Cloudflare）
 
 ```
