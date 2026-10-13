@@ -152,6 +152,7 @@ npm run deploy     # 部署（account_id 已寫在 wrangler.jsonc）。只換程
 npm run db:local   # 本機套用 schema.sql
 npm run db:remote  # 線上套用 schema.sql（CREATE TABLE IF NOT EXISTS，表已存在不做事）
 npx wrangler d1 execute editor-site-db --local --file=./seed-works.sql   # 本機匯入作品初始資料（線上不要再跑）
+npx wrangler d1 execute editor-site-db --local --file=./seed-work-cats.sql   # 本機匯入分類（要在 seed-works 之後；本機 D1 還沒跑過，不跑的話本機後台作品頁會讀取失敗）
 
 npx wrangler login              # token 過期時（必須在真正的終端機跑，非互動環境起不來）
 npx wrangler secret put ADMIN_PASSWORD
@@ -232,7 +233,7 @@ npx wrangler rollback           # 線上出問題時退回上一版（只退程�
 
 ### 本機開發
 
-- 用 AI 工具開關 dev server 時，只結束佔用連接埠的程序不夠，`wrangler` 主程序會留在背景。收工時確認沒有殘留的 `node` / `workerd` 程序
+- 用 AI 工具開關 dev server 時，只結束佔用連接埠的程序不夠，`wrangler` 主程序會留在背景，還會自己把 `workerd` 重新拉起來（10/13 又發生一次，收工檢查時才清掉）。收工時確認沒有殘留的 `node` / `workerd` 程序
 
 ### 版面
 
@@ -252,11 +253,12 @@ npx wrangler rollback           # 線上出問題時退回上一版（只退程�
 
 ### 等客戶回饋
 
-- 10/15 原訂給客戶測試，實際上客戶 10/13 就開始用了。收集他用後台的問題（手機操作、上傳、排序）再決定要不要調整
+- 10/15 原訂給客戶測試，實際上客戶 10/13 就開始用了。收集他用後台的問題（手機操作、上傳、排序、管理分類與狀態篩選）再決定要不要調整
+- [ ] 登入線上 `/admin#works` 實際操作一次「管理分類」與狀態篩選（上線時只驗證了公開 API 與 401，登入後的操作沒在線上看過）
 
 ### 文件
 
-- [ ] `CLAUDE.md` 改過了（§2、§5、§6、§6.5、§7），**要重新上傳覆蓋 claude.ai 專案知識庫那一份**
+- [ ] `CLAUDE.md` 改過了（10/12–10/13：§2、§5、§6、§6.5、§7；10/13 再加分類管理與狀態篩選），**要重新上傳覆蓋 claude.ai 專案知識庫那一份**。`CONTENT-CHECKLIST.md` 也改了一行，知識庫有放的話一起換
 
 ### 其他
 
