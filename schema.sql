@@ -31,3 +31,9 @@ CREATE TABLE IF NOT EXISTS works (
 );
 
 CREATE INDEX IF NOT EXISTS idx_works_sort_order ON works (sort_order);
+
+-- 作品分類（後台「管理分類」）。works.cat 存的是這裡的 name，改名時兩張表一起改
+CREATE TABLE IF NOT EXISTS work_cats (
+  name       TEXT PRIMARY KEY,
+  sort_order INTEGER NOT NULL               -- 小的排前面＝作品集頁篩選按鈕的順序
+);

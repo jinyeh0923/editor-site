@@ -1,6 +1,6 @@
 // Cloudflare Worker 進入點。
 // 1) 收表單寫進 D1（含驗證）  2) 後台資料 JSON API  3) 後台頁面 admin.html（需登入）
-// 4) 作品 works：公開讀取 + 後台增刪改排序  5) 圖片 media：後台上傳到 R2、/media/* 公開讀取
+// 4) 作品 works、作品分類 cats：公開讀取 + 後台增刪改排序  5) 圖片 media：後台上傳到 R2、/media/* 公開讀取
 // 6) 其餘靜態檔。
 
 const LIMITS = { name: 100, email: 254, message: 5000 };
@@ -40,6 +40,12 @@ export default {
     }
     if (url.pathname === "/api/admin/works" || url.pathname.startsWith("/api/admin/works/")) {
       return handleAdminWorks(request, env, url);
+    }
+    if (url.pathname === "/api/cats") {
+      return handlePublicCats(request, env);
+    }
+    if (url.pathname === "/api/admin/cats" || url.pathname === "/api/admin/cats/reorder") {
+      return handleAdminCats(request, env, url);
     }
     if (url.pathname === "/api/admin/media") {
       return handleAdminMedia(request, env, url);
@@ -166,6 +172,7 @@ async function createWork(request, env) {
   const v = validateWork(body.data, {});
   if (v.error) return json({ error: v.error }, 400);
   const w = v.work;
+  if (!(await catExists(env, w.cat))) return json({ error: "沒有這個分類，請先到「管理分類」新增：" + w.cat }, 400);
 
   let id = body.data.id == null ? "" : String(body.data.id).trim();
   if (!id) id = idFromUrl(w.url);
@@ -202,6 +209,10 @@ async function updateWork(request, env, id) {
   const v = validateWork(body.data, cur);
   if (v.error) return json({ error: v.error }, 400);
   const w = v.work;
+  // 只在換分類時檢查（下架等局部更新不用多查一次）
+  if (w.cat !== cur.cat && !(await catExists(env, w.cat))) {
+    return json({ error: "沒有這個分類，請先到「管理分類」新增：" + w.cat }, 400);
+  }
 
   await env.DB.prepare(
     `UPDATE works SET url = ?, cat = ?, title = ?, role = ?, dur = ?, views = ?, poster = ?, ratio = ?, tag = ?,
@@ -368,6 +379,98 @@ function parseWorkUrl(s) {
 function idFromUrl(s) {
   const p = s ? parseWorkUrl(s) : null;
   return p ? p.prefix + "-" + p.code : "";
+}
+
+// ---- 作品分類 work_cats ----
+// 分類以名稱為主鍵，works.cat 存的就是名稱；改名時兩張表一起改。
+// 名稱可能含空白、斜線等字元，所以寫入一律把名稱放在 JSON body，不放在網址路徑。
+async function handlePublicCats(request, env) {
+  if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
+  const { results } = await env.DB.prepare("SELECT name FROM work_cats ORDER BY sort_order, name").all();
+  return Response.json(results.map((r) => r.name), {
+    headers: {
+      "Cache-Control": "public, max-age=60",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+}
+
+async function handleAdminCats(request, env, url) {
+  if (!authed(request, env)) return needAuth();
+  const method = request.method;
+  if (url.pathname.endsWith("/reorder")) {
+    if (method === "POST") return reorderCats(request, env);
+    return json({ error: "method not allowed" }, 405);
+  }
+  if (method === "GET") {
+    const { results } = await env.DB.prepare("SELECT name FROM work_cats ORDER BY sort_order, name").all();
+    return json(results.map((r) => r.name));
+  }
+  if (method !== "POST" && method !== "PUT" && method !== "DELETE") {
+    return json({ error: "method not allowed" }, 405);
+  }
+  const body = await readJson(request);
+  if (body.error) return json({ error: body.error }, body.status);
+  const name = catName(body.data.name);
+  if (!name) return json({ error: "分類名稱必填，最多 " + WORK_LIMITS.cat + " 字" }, 400);
+
+  if (method === "POST") {
+    if (await catExists(env, name)) return json({ error: "這個分類已經存在：" + name }, 409);
+    // 新分類排最後面
+    await env.DB.prepare(
+      "INSERT INTO work_cats (name, sort_order) VALUES (?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM work_cats))"
+    ).bind(name).run();
+    return json({ ok: true, name }, 201);
+  }
+
+  if (!(await catExists(env, name))) return json({ error: "找不到這個分類：" + name }, 404);
+
+  if (method === "PUT") {
+    const to = catName(body.data.rename);
+    if (!to) return json({ error: "新名稱必填，最多 " + WORK_LIMITS.cat + " 字" }, 400);
+    if (to === name) return json({ ok: true, name });
+    if (await catExists(env, to)) return json({ error: "這個分類名稱已經有了：" + to }, 409);
+    // batch＝同一個交易：分類與底下的作品一起改名
+    await env.DB.batch([
+      env.DB.prepare("UPDATE work_cats SET name = ? WHERE name = ?").bind(to, name),
+      env.DB.prepare("UPDATE works SET cat = ?, updated_at = ? WHERE cat = ?").bind(to, new Date().toISOString(), name),
+    ]);
+    return json({ ok: true, name: to });
+  }
+
+  // DELETE：還有作品（含已下架）的分類不能刪，避免作品變成沒有分類
+  const used = await env.DB.prepare("SELECT COUNT(*) AS n FROM works WHERE cat = ?").bind(name).first();
+  if (used.n) {
+    return json({ error: "「" + name + "」還有 " + used.n + " 筆作品（含已下架），請先把作品改到其他分類" }, 409);
+  }
+  await env.DB.prepare("DELETE FROM work_cats WHERE name = ?").bind(name).run();
+  return json({ ok: true, name });
+}
+
+// names 必須剛好是目前全部分類；對不上代表後台畫面是舊的，回 409
+async function reorderCats(request, env) {
+  const body = await readJson(request);
+  if (body.error) return json({ error: body.error }, body.status);
+  const names = body.data.names;
+  if (!Array.isArray(names) || names.some((x) => typeof x !== "string")) {
+    return json({ error: "names 必須是分類名稱的陣列" }, 400);
+  }
+  const { results } = await env.DB.prepare("SELECT name FROM work_cats").all();
+  const current = new Set(results.map((r) => r.name));
+  const stale = names.length !== current.size || new Set(names).size !== names.length || names.some((x) => !current.has(x));
+  if (stale) return json({ error: "分類清單已經變動，請重新整理後再排序" }, 409);
+  if (names.length) {
+    await env.DB.batch(names.map((n, i) => env.DB.prepare("UPDATE work_cats SET sort_order = ? WHERE name = ?").bind(i + 1, n)));
+  }
+  return json({ ok: true });
+}
+
+function catName(raw) {
+  const s = typeof raw === "string" ? raw.trim() : "";
+  return s && s.length <= WORK_LIMITS.cat ? s : "";
+}
+async function catExists(env, name) {
+  return !!(await env.DB.prepare("SELECT name FROM work_cats WHERE name = ?").bind(name).first());
 }
 
 // ---- 圖片 media（R2）----

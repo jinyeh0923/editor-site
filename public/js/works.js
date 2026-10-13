@@ -6,7 +6,7 @@
      url    作品連結，程式自動判斷平台；空字串＝不可點擊（卡片改輸出 div，不產生死連結）
               - YouTube（youtu.be / youtube.com/watch?v= / youtube.com/shorts/）→ 縮圖自動抓，免填 poster
               - Instagram（instagram.com/reel|p|tv/）→ 無法自動抓縮圖，必須給 poster
-     cat    分類（見下方 WORK_CATS，自動產生作品集頁篩選按鈕）
+     cat    分類（自動產生作品集頁篩選按鈕；按鈕順序＝後台「管理分類」排的，見 loadCats）
      title / dur / views  標題、長度、觀看數，都是手填，空值不顯示
      poster 封面圖路徑（例 "posters/works/reel-1.jpg"）
      ratio  "9/16"、"16/9"、"1/1"；空值自動推斷（reel/shorts→9:16、youtube 長片→16:9）
@@ -16,14 +16,6 @@
 
 /* loadWorks() 完成後才有內容；在那之前是空陣列 */
 window.WORKS = [];
-
-/* 作品集頁篩選按鈕的顯示順序。沒列到的分類（例如後台新增的）會照作品順序補在後面。 */
-window.WORK_CATS = [
-  "賽事紀錄與運動社群經營",
-  "商業品牌短影音",
-  "活動紀錄與日常",
-  "個人 IP 影音製作",
-];
 
 /* ── 資料載入（fetch 後渲染）的共用函式；之後案例、文案改讀 API 也用這兩支 ── */
 
@@ -82,6 +74,14 @@ window.loadWorks = function () {
   return window.fetchJSON("/api/works").then(function (list) {
     window.WORKS = list;
     return list;
+  });
+};
+
+/* 分類名稱的陣列，順序＝後台排的（GET /api/cats）。只影響篩選按鈕的順序，
+   所以讀取失敗就回空陣列，由呼叫端退回「照作品出現的順序」。 */
+window.loadCats = function () {
+  return window.fetchJSON("/api/cats").catch(function () {
+    return [];
   });
 };
 

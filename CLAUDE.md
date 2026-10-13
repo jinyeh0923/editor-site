@@ -44,8 +44,9 @@ public/
 ├─ posters/          手動封面圖（IG 作品封面、本人照片、案例封面、服務圖…）。後台上傳的圖不在這裡，在 R2（網址 /media/…）
 └─ vendors/          自架第三方套件（如 Lenis）+ README（記版本）
 src/index.js          Cloudflare Worker（表單收件 + 作品 API + 圖片上傳 / 輸出 + 後台 API + 後台頁 gate）
-schema.sql            D1 資料表定義（submissions、works）
+schema.sql            D1 資料表定義（submissions、works、work_cats）
 seed-works.sql        works 表的初始資料（2026-10-12 從舊版 works.js 轉出的 56 筆）
+seed-work-cats.sql    work_cats 表的初始資料（原本寫死的 4 個分類 + works 裡用過的其他分類）
 scripts/              gen-seed-works.cjs：從舊版 works.js 重新產生 seed
 wrangler.jsonc        Cloudflare 設定
 package.json          scripts: dev / deploy / db:local / db:remote
@@ -129,7 +130,7 @@ package.json          scripts: dev / deploy / db:local / db:remote
 - `home`（0/1）：1＝出現在首頁精選 teaser。沒有 `pin` 欄位了，誰排第一由後台順序決定。
 - 比例 `ratio` 不填會自動推斷（shorts/reel→9:16、YT 長片→16:9）；`tag` 不填自動標（Shorts/Reels/YouTube）。
 - 卡片連結 `target="_blank" rel="noopener noreferrer"`，直接導去平台（**不要嵌 iframe**——要把流量導去客戶頻道）。
-- 分類篩選（`.filter`）按鈕自動從 `WORKS` 的 `cat` 產生（不要用 `<select>`）。
+- 分類篩選（`.filter`）按鈕自動從 `WORKS` 的 `cat` 產生（不要用 `<select>`）。按鈕順序＝後台「管理分類」排的（`loadCats()` 讀 `GET /api/cats`；讀不到就照作品出現的順序）。沒有上架作品的分類不出按鈕。
 - 載入更多：作品 > 16 個才啟用，一次 12 個。
 
 ### 作品牆排版 → `masonry.js`
@@ -155,7 +156,8 @@ package.json          scripts: dev / deploy / db:local / db:remote
 - **作品頁**：一張列表，每列有排序、封面、標題（可點去平台）+ id、分類、長度、觀看、狀態、操作（編輯 / 上架或下架 / 刪除）。下架的列變淡。
 - **排序三種方式，都呼叫 `moveTo(id, 位置)`**：拖拉左邊的把手（拖到視窗上下緣會自動捲動）、直接改編號後按 Enter、↑↓。畫面先更新，再把整份順序送 `POST /api/admin/works/reorder` 的 `{ids}`；失敗就重抓。**觸控裝置不能拖拉**（瀏覽器原生拖放不支援），手機靠改編號或 ↑↓。
 - **新增 / 編輯表單是跳窗**（原生 `<dialog id="w-dialog">`，`showModal()`）：兩者共用同一張表單，編輯時隱藏「作品 ID」欄。Esc、取消、存檔成功會關；**點背景不關**（避免誤觸弄丟輸入）。之後案例、文案的表單比照用跳窗。
-- **分類篩選**：列表上方的按鈕（`#w-filter`）。選了分類只列那一類，編號與排序都是「分類內」的順序：該分類在整份順序裡佔的那幾格不變，只在那幾格裡換位置，其他分類不動（`moveTo` 處理）。「全部」排的是整份順序。
+- **狀態 / 分類篩選**：列表上方兩排按鈕，狀態（`#w-status`：全部 / 上架中 / 已下架）與分類（`#w-filter`），可同時用。括號內的筆數跟著另一排的選擇變（選「已下架」，分類那排就是各分類的下架筆數）。選了之後只列符合的（`inView`），編號與排序都是「列出來的這些」的順序：它們在整份順序裡佔的那幾格不變，只在那幾格裡換位置，沒列出來的不動（`moveTo` 處理）。都選「全部」排的是整份順序。
+- **管理分類**：作品頁的「管理分類」開跳窗（`#c-dialog`）：新增、改名（連同底下作品一起改）、刪除（還有作品的分類刪不掉）、↑↓ 排順序（＝前台篩選按鈕的順序）。訊息顯示在跳窗內（`#c-note`）。作品表單的分類是 `<select>`，只能選已存在的分類。
 - **封面圖上傳**：表單的「上傳圖片」先在瀏覽器把圖縮到長邊 1280、轉成 JPG，再送 `POST /api/admin/media?folder=works`，回來的路徑填進「封面圖」欄，按「儲存」才套用。路徑欄仍可手填 `posters/…`。上傳中鎖住「儲存」。
 - **訊息位置**：表單的錯誤顯示在跳窗內（`#w-form-note`）；存檔成功與列表操作的結果顯示在列表上方（`#w-note`）。API 錯誤直接顯示伺服器回的中文 `error`。
 - 送出期間用 `run()` 鎖住所有操作（`busy`），避免連點造成順序錯亂。
@@ -180,6 +182,14 @@ package.json          scripts: dev / deploy / db:local / db:remote
   - `PUT /:id`：局部更新（下架只送 `{"visible":0}`）；id 不可變更。
   - `DELETE /:id`：被案例引用回 409；讀不到 `cases.js` 回 503，不放行。
   - `POST /reorder`：`{ids:[…]}` 整份順序（`sort_order` 重編 1..N，清單與資料庫對不上回 409），或 `{id, dir}` 與相鄰交換。
+- `GET /api/cats`：公開，分類名稱的陣列（依 `sort_order`），快取同 `/api/works`。
+- `/api/admin/cats`（Basic Auth）：分類以名稱為主鍵（`work_cats.name`，`works.cat` 存的就是名稱）。名稱可能含空白、斜線，所以**名稱一律放 JSON body，不放網址**：
+  - `GET`：全部分類名稱。
+  - `POST {name}`：新增，排最後。
+  - `PUT {name, rename}`：改名，`work_cats` 與 `works.cat` 同一個交易一起改。
+  - `DELETE {name}`：還有作品（含下架）回 409。
+  - `POST /reorder {names:[…]}`：整份順序，對不上回 409。
+  - 作品新增、或編輯時換分類，分類必須已存在（400）。
 - `POST /api/admin/media?folder=works`（Basic Auth）：上傳圖片到 R2。body 就是圖檔，`Content-Type` 必須是 `image/jpeg` / `image/png` / `image/webp`（非簡單型別，跨站送不出來，同樣擋 CSRF）；上限 2 MB；檢查檔頭確認真的是那種圖；檔名由伺服器產生（`works/<日期>-<隨機>.jpg`）。回 `{path:"media/works/….jpg"}`。可用的資料夾列在 `MEDIA_FOLDERS`，之後案例 logo、本人照片各加一個。
 - `GET /media/*`：公開，從 R2 讀圖。檔名不會重複、內容不會變，所以 `Cache-Control: immutable` 一年。
 - `/admin`、`/admin.html`：Basic Auth → 用 `env.ASSETS.fetch(new URL("/admin", url))` 交出後台頁。**注意：一定要抓不帶 .html 的 `/admin`**，否則資源層會把 `/admin.html` 轉址回 `/admin` → 無限迴圈。
@@ -192,7 +202,7 @@ package.json          scripts: dev / deploy / db:local / db:remote
 
 目標：讓客戶（薯餅）在 /admin 自己管理內容。**內容由客戶改，版型設計由開發者改**，後台不做任何版面編輯功能。
 
-狀態：第 1 階段已實作（作品 API、後台作品頁含拖拉排序、分類篩選與跳窗表單、前台改讀 API、masonry 有限往前看）；第 2 階段做了作品封面上傳（案例 logo、本人照片還沒接）；第 3–4 階段未開始。
+狀態：第 1 階段已實作（作品 API、後台作品頁含拖拉排序、狀態 / 分類篩選、管理分類與跳窗表單、前台改讀 API、masonry 有限往前看）；第 2 階段做了作品封面上傳（案例 logo、本人照片還沒接）；第 3–4 階段未開始。
 
 分階段（依序做，每階段完成才開下一階段）：
 1. 作品管理：works 搬進 D1，後台可新增/編輯/刪除/上下架/排序（拖拉、改編號、↑↓，見 §5「後台」）。IG 封面在後台上傳（第 2 階段），也可手填路徑。
@@ -224,6 +234,7 @@ npm run deploy
 - R2（後台上傳的圖）：帳號要先在 Cloudflare 後台啟用 R2，再 `npx wrangler r2 bucket create editor-site-media`；`wrangler.jsonc` 的 `r2_buckets` 綁定名稱是 `MEDIA`。本機 `npm run dev` 用的是本機模擬的 R2，跟線上無關。
 - `wrangler.jsonc` 的 `run_worker_first` 必須含 `["/admin", "/admin.html", "/api/*", "/media/*"]`，否則 GET 的 API 與 `/media/*` 會被 `not_found_handling:"404-page"` 當成找不到檔案、回 404，進不了 Worker。
 - `works` 表第一次上線：`npm run db:remote` 建表後，再 `npx wrangler d1 execute editor-site-db --remote --file=./seed-works.sql` 匯入初始資料（`INSERT OR IGNORE`，重跑不會覆蓋後台改過的）。本機把 `--remote` 換成 `--local`。
+- `work_cats` 表同理：`npm run db:remote` 建表後跑一次 `--file=./seed-work-cats.sql`。**要在部署新版 Worker 之前跑**，否則後台作品頁會讀取失敗（它同時抓作品與分類）。
 - 改了 schema 後，雲端舊表若缺欄位會報 `no such column`。測試資料可直接 `DROP TABLE submissions` 再 `--file=./schema.sql` 重建；要保留資料就用 `ALTER TABLE ... ADD COLUMN`。
 - **CSS/JS 快取**：`_headers` 已對 `/css/*`、`/js/*` 設 `Cache-Control: public, max-age=300, must-revalidate`。改完 CSS/JS 部署後，最多 5 分鐘使用者才拿到新版（不是 cookie 問題，是瀏覽器快取）。要更即時把 300 調小。因此不需要在 HTML 加 `?v=` 版本號。
 

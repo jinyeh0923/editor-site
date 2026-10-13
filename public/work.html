@@ -89,10 +89,14 @@
     lmBtn.addEventListener("click", function () { shown += STEP; paint(); });
 
     // 作品從 /api/works 載入後才建立篩選按鈕與牆面；失敗或沒有作品時只在牆面顯示訊息
-    renderWhenLoaded(wall, loadWorks(), function () {
-      // 先照 works.js 的 WORK_CATS 排，沒列到的照 WORKS 出現順序補在後面，「全部」放最末
+    // 分類順序跟作品同時抓；等兩邊都到了再畫（分類抓不到不影響作品）
+    var catOrder = [];
+    var catsReady = loadCats().then(function (c) { if (Array.isArray(c)) catOrder = c; });
+    var ready = loadWorks().then(function (list) { return catsReady.then(function () { return list; }); });
+    renderWhenLoaded(wall, ready, function () {
+      // 先照後台排的分類順序，沒列到的照 WORKS 出現順序補在後面，「全部」放最末；沒有上架作品的分類不出按鈕
       var present = [...new Set(WORKS.map(function (w) { return w.cat; }))];
-      var ordered = (window.WORK_CATS || []).filter(function (c) { return present.indexOf(c) > -1; });
+      var ordered = catOrder.filter(function (c) { return present.indexOf(c) > -1; });
       var cats = ordered.concat(present.filter(function (c) { return ordered.indexOf(c) < 0; }), ["全部"]);
       var DEFAULT_CAT = cats[0]; // 預設選第一個分類，不是「全部」
       filterBar.innerHTML = cats.map(function (c) {

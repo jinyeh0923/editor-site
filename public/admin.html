@@ -272,6 +272,66 @@
       border-color: var(--accent)
     }
 
+    /* 管理分類跳窗：一列一個分類（↑↓、名稱、筆數、改名、刪除），最下面是新增 */
+    .cbox {
+      display: grid;
+      gap: 14px;
+      padding: 24px
+    }
+
+    .cbox h2 {
+      margin: 0;
+      font-weight: 900;
+      font-size: 20px
+    }
+
+    .cbox .hint,
+    .cbox .note {
+      margin: 0
+    }
+
+    .cbox input {
+      background-color: var(--bg);
+      min-width: 0;
+      flex: 1 1 200px
+    }
+
+    .crow,
+    .cadd {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap
+    }
+
+    .crow .abtn {
+      padding: 6px 12px
+    }
+
+    #c-rows {
+      display: grid;
+      gap: 8px
+    }
+
+    .crow .cnum {
+      min-width: 15ch;
+      text-align: right;
+      font-family: var(--fm);
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap
+    }
+
+    .crow .abtn.danger:hover {
+      border-color: #ff6b6b;
+      color: #ff6b6b
+    }
+
+    .cadd {
+      padding-top: 14px;
+      border-top: 1px solid var(--line)
+    }
+
     /* 作品列表 */
     #w-rows td {
       vertical-align: middle
@@ -388,6 +448,10 @@
     @media (max-width: 640px) {
       .wform {
         grid-template-columns: 1fr;
+        padding: 16px
+      }
+
+      .cbox {
         padding: 16px
       }
     }
@@ -508,11 +572,13 @@
       </div>
       <div class="head-actions">
         <button id="w-new" type="button">新增作品</button>
+        <button id="c-open" type="button">管理分類</button>
         <button id="w-refresh" type="button">重新整理</button>
       </div>
     </div>
     <p class="hint">排序：拖拉左邊的把手，或直接改編號後按 Enter，也可以用 ↑↓。編號 1 排在網站最前面。改完後前台最多 1 分鐘內更新。</p>
-    <p class="hint">選一個分類＝只看那一類，編號和排序都是「這個分類裡」的順序（就是作品集頁點該分類看到的順序），不會動到其他分類。</p>
+    <p class="hint">上面一排選狀態、下面一排選分類，兩排可以一起用，括號內是筆數。選了之後只列符合的作品，編號和排序都是「這些作品裡」的順序，不會動到沒列出來的。選「上架中」＋某個分類，就是作品集頁點該分類看到的順序。</p>
+    <div class="wfilter" id="w-status" role="group" aria-label="上架狀態篩選"></div>
     <div class="wfilter" id="w-filter" role="group" aria-label="作品分類篩選"></div>
     <p class="note" id="w-note" role="status" aria-live="polite"></p>
 
@@ -525,8 +591,8 @@
         <small>只接受 YouTube 或 Instagram 的作品連結。留空＝卡片不可點擊。</small>
       </label>
       <label>分類
-        <input name="cat" type="text" list="w-cats" autocomplete="off" maxlength="40" required>
-        <small>從清單選現有分類，或直接輸入新的。</small>
+        <select name="cat" required></select>
+        <small>要新增或改名，請用列表上方的「管理分類」。</small>
       </label>
       <label>標題
         <input name="title" type="text" autocomplete="off" maxlength="120">
@@ -575,7 +641,20 @@
       </div>
     </form>
     </dialog>
-    <datalist id="w-cats"></datalist>
+
+    <dialog class="wdialog" id="c-dialog" aria-labelledby="c-title">
+      <div class="cbox">
+        <h2 id="c-title">管理分類</h2>
+        <p class="hint">順序＝作品集頁篩選按鈕的順序。改名會連同底下的作品一起改。還有作品的分類不能刪，要先把作品改到其他分類。沒有上架作品的分類不會出現在網站上。</p>
+        <div id="c-rows"></div>
+        <div class="cadd">
+          <input id="c-new" type="text" autocomplete="off" maxlength="40" placeholder="新分類名稱" aria-label="新分類名稱">
+          <button type="button" class="abtn" id="c-add">新增分類</button>
+        </div>
+        <p class="note" id="c-note" role="status" aria-live="polite"></p>
+        <div><button type="button" class="abtn" id="c-close">關閉</button></div>
+      </div>
+    </dialog>
 
     <div class="tablewrap">
       <table>
@@ -668,11 +747,13 @@
     var wFormNote = document.getElementById("w-form-note");
     var wFormTitle = document.getElementById("w-form-title");
     var wIdField = document.getElementById("w-id-field");
-    var wCats = document.getElementById("w-cats");
     var works = [];
+    var cats = [];   // 分類名稱，順序＝後台排的（/api/admin/cats）
     var wFilter = document.getElementById("w-filter");
+    var wStatus = document.getElementById("w-status");
     var wCat = "";   // 目前篩選的分類；空字串＝全部
-    var view = [];   // 畫面上列出的作品（全部，或某一分類），編號與排序都以它為準
+    var wVis = "";   // 目前篩選的狀態："on" 上架中 / "off" 已下架 / 空字串＝全部
+    var view = [];   // 畫面上列出的作品（符合篩選的），編號與排序都以它為準
     var editingId = null; // null＝新增
     var busy = false;
     var dragId = null; // 正在拖的作品 id
@@ -723,14 +804,26 @@
       return b;
     }
 
+    // 篩選條件（狀態、分類）各自與合起來的判斷
+    function inVis(w) { return !wVis || (wVis === "on") === !!w.visible; }
+    function inCat(w) { return !wCat || w.cat === wCat; }
+    function inView(w) { return inVis(w) && inCat(w); }
+    // 分類清單 + 作品用到但清單裡沒有的（理論上不會有；有的話照樣列出來，才看得到那些作品）
+    function allCats() {
+      var list = cats.slice();
+      works.forEach(function (w) { if (list.indexOf(w.cat) < 0) list.push(w.cat); });
+      return list;
+    }
+
     function renderWorks() {
       var shown = works.filter(function (w) { return w.visible; }).length;
-      wCount.textContent = "（" + works.length + " 筆，上架 " + shown + "）";
+      wCount.textContent = "（" + works.length + " 筆：上架 " + shown + "／下架 " + (works.length - shown) + "）";
       renderFilter();
-      view = wCat ? works.filter(function (w) { return w.cat === wCat; }) : works.slice();
+      view = works.filter(inView);
       wRows.innerHTML = "";
-      if (!works.length) {
-        wRows.innerHTML = '<tr><td colspan="8" class="empty">目前沒有作品</td></tr>';
+      if (!view.length) {
+        wRows.innerHTML = '<tr><td colspan="8" class="empty"></td></tr>';
+        wRows.querySelector(".empty").textContent = works.length ? "沒有符合篩選的作品" : "目前沒有作品";
         return;
       }
       view.forEach(function (w, i) {
@@ -870,40 +963,42 @@
 
         wRows.appendChild(tr);
       });
-
-      // 分類建議清單：現有作品用過的分類
-      var seen = {};
-      wCats.innerHTML = "";
-      works.forEach(function (w) {
-        if (!w.cat || seen[w.cat]) return;
-        seen[w.cat] = 1;
-        var o = document.createElement("option");
-        o.value = w.cat;
-        wCats.appendChild(o);
-      });
     }
 
-    // 分類按鈕：「全部」+ 現有分類（照目前順序第一次出現的先後），括號內是筆數
+    // 兩排篩選按鈕：狀態（全部 / 上架中 / 已下架）與分類（全部 + 各分類，順序＝管理分類排的）。
+    // 括號內的筆數會跟著另一排的選擇變：選了「已下架」，分類那排就是各分類的下架筆數。
+    function filterBtn(box, text, on, onClick) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = text;
+      b.setAttribute("aria-pressed", on);
+      b.addEventListener("click", function () { if (busy) return; onClick(); note(""); renderWorks(); });
+      box.appendChild(b);
+    }
     function renderFilter() {
-      var cats = [], n = {};
-      works.forEach(function (w) {
-        if (!n[w.cat]) { n[w.cat] = 0; cats.push(w.cat); }
-        n[w.cat]++;
+      var list = allCats();
+      if (wCat && list.indexOf(wCat) < 0) wCat = ""; // 篩選中的分類已經被刪掉或改名
+      var inC = works.filter(inCat), inV = works.filter(inVis);
+      wStatus.innerHTML = "";
+      [["", "全部狀態"], ["on", "上架中"], ["off", "已下架"]].forEach(function (s) {
+        var n = inC.filter(function (w) { return !s[0] || (s[0] === "on") === !!w.visible; }).length;
+        filterBtn(wStatus, s[1] + "（" + n + "）", s[0] === wVis, function () { wVis = s[0]; });
       });
-      if (wCat && !n[wCat]) wCat = ""; // 篩選中的分類已經沒有作品（刪光或改了分類）
       wFilter.innerHTML = "";
-      [""].concat(cats).forEach(function (c) {
-        var b = document.createElement("button");
-        b.type = "button";
-        b.textContent = (c || "全部") + "（" + (c ? n[c] : works.length) + "）";
-        b.setAttribute("aria-pressed", c === wCat);
-        b.addEventListener("click", function () { if (busy) return; wCat = c; note(""); renderWorks(); });
-        wFilter.appendChild(b);
+      [""].concat(list).forEach(function (c) {
+        var n = c ? inV.filter(function (w) { return w.cat === c; }).length : inV.length;
+        filterBtn(wFilter, (c || "全部分類") + "（" + n + "）", c === wCat, function () { wCat = c; });
       });
     }
 
+    // 作品與分類一起抓（列表、篩選按鈕、表單的分類選單都要兩邊的資料）
     function fetchWorks() {
-      return api("GET", "/api/admin/works").then(function (list) { works = list; renderWorks(); });
+      return Promise.all([api("GET", "/api/admin/works"), api("GET", "/api/admin/cats")]).then(function (r) {
+        works = r[0];
+        cats = r[1];
+        renderWorks();
+        if (cDialog.open) renderCats();
+      });
     }
     function loadWorks() {
       wRows.innerHTML = '<tr><td colspan="8" class="empty">載入中…</td></tr>';
@@ -945,25 +1040,21 @@
     }
     // 把一筆移到畫面列表的第 to 個位置（0 開始）。畫面先更新，再把整份順序送給伺服器；
     // 失敗就重新抓一次，回到伺服器上的實際順序。
-    // 有篩選分類時：這個分類的作品在整份順序裡佔的那幾格不變，只在那幾格裡換位置，其他分類完全不動。
+    // 有篩選（狀態或分類）時：列出來的作品在整份順序裡佔的那幾格不變，只在那幾格裡換位置，沒列出來的完全不動。
     function moveTo(id, to) {
       var from = indexOfWork(id);
       if (busy || from < 0 || to < 0 || to >= view.length || to === from) { renderWorks(); return; }
       var next = view.slice();
       var item = next.splice(from, 1)[0];
       next.splice(to, 0, item);
-      if (wCat) {
-        var k = 0;
-        works = works.map(function (w) { return w.cat === wCat ? next[k++] : w; });
-      } else {
-        works = next;
-      }
+      var k = 0;
+      works = works.map(function (w) { return inView(w) ? next[k++] : w; });
       renderWorks();
       var ids = works.map(function (w) { return w.id; });
       var failed = false;
       run(
         api("POST", "/api/admin/works/reorder", { ids: ids }).catch(function (err) { failed = true; throw err; }),
-        "已移到" + (wCat ? "「" + wCat + "」的" : "") + "第 " + (to + 1) + " 個：" + (item.title || item.id)
+        "已移到" + (wCat ? "「" + wCat + "」" : "") + (wVis ? (wVis === "on" ? "上架中" : "已下架") : "") + (wCat || wVis ? "的" : "") + "第 " + (to + 1) + " 個：" + (item.title || item.id)
       ).then(function () { if (failed) fetchWorks().catch(function () {}); });
     }
     function toggle(w) {
@@ -987,9 +1078,17 @@
       wFormTitle.textContent = w ? "編輯作品（" + w.id + "）" : "新增作品";
       wIdField.hidden = !!w; // id 建立後不可變更，編輯時不顯示
       var f = wForm.elements;
+      // 分類選單要先填好選項，下面才設得進值；新增時預設目前篩選的分類
+      f.cat.innerHTML = "";
+      allCats().forEach(function (c) {
+        var o = document.createElement("option");
+        o.value = o.textContent = c;
+        f.cat.appendChild(o);
+      });
       ["url", "cat", "title", "dur", "views", "poster", "ratio", "tag"].forEach(function (k) {
         f[k].value = (w && w[k]) || "";
       });
+      if (!w) f.cat.value = wCat || cats[0] || "";
       f.id.value = "";
       f.visible.checked = w ? !!w.visible : true;
       f.home.checked = w ? !!w.home : false;
@@ -1085,7 +1184,7 @@
       ["url", "cat", "title", "dur", "views", "poster", "ratio", "tag"].forEach(function (k) {
         data[k] = f[k].value.trim();
       });
-      if (!data.cat) { wFormNote.textContent = "請填分類"; f.cat.focus(); return; }
+      if (!data.cat) { wFormNote.textContent = "請選分類（還沒有分類的話，先到「管理分類」新增）"; f.cat.focus(); return; }
       wFormNote.textContent = "";
       var req;
       if (editingId) {
@@ -1099,6 +1198,7 @@
         req.then(function (saved) {
           closeForm();
           if (wCat && data.cat !== wCat) wCat = data.cat; // 存到別的分類 → 切過去，不然列表上看不到
+          if (wVis && (wVis === "on") !== !!data.visible) wVis = ""; // 狀態跟目前篩選的不同 → 同理
           return fetchWorks().then(function () { return saved; });
         }),
         wasEdit ? "已儲存" : "已新增，排在最前面（該分類的第 1 個）",
@@ -1108,6 +1208,96 @@
     document.getElementById("w-cancel").addEventListener("click", closeForm);
     document.getElementById("w-new").addEventListener("click", function () { openForm(null); });
     document.getElementById("w-refresh").addEventListener("click", loadWorks);
+
+    /* ---------- 作品分類（管理分類跳窗） ---------- */
+    var cDialog = document.getElementById("c-dialog");
+    var cRows = document.getElementById("c-rows");
+    var cNote = document.getElementById("c-note");
+    var cNew = document.getElementById("c-new");
+    function catNote(text, bad) {
+      cNote.textContent = text || "";
+      cNote.className = bad ? "note bad" : "note";
+    }
+    // 分類的寫入都走這支：送出 → 重抓作品與分類 → 訊息顯示在跳窗裡
+    function catRun(promise, okText) {
+      var ok = true;
+      run(
+        promise.then(fetchWorks),
+        "",
+        function (err) { ok = false; catNote(err.message, true); }
+      ).then(function () { if (ok) catNote(okText); });
+    }
+    function renderCats() {
+      cRows.innerHTML = "";
+      if (!cats.length) {
+        var p = document.createElement("p");
+        p.className = "hint";
+        p.textContent = "還沒有分類，先在下面新增一個。";
+        cRows.appendChild(p);
+        return;
+      }
+      cats.forEach(function (c, i) {
+        var mine = works.filter(function (w) { return w.cat === c; });
+        var on = mine.filter(function (w) { return w.visible; }).length;
+        var row = document.createElement("div");
+        row.className = "crow";
+        var up = btn("↑", "上移：" + c, function () { moveCat(i, i - 1); });
+        var down = btn("↓", "下移：" + c, function () { moveCat(i, i + 1); });
+        up.disabled = i === 0;
+        down.disabled = i === cats.length - 1;
+        var inp = document.createElement("input");
+        inp.type = "text";
+        inp.maxLength = 40;
+        inp.autocomplete = "off";
+        inp.value = c;
+        inp.setAttribute("aria-label", "分類名稱：" + c);
+        var num = document.createElement("span");
+        num.className = "cnum";
+        num.textContent = "上架 " + on + "／下架 " + (mine.length - on);
+        var ren = btn("改名", "改名：" + c, function () { renameCat(c, inp.value.trim()); });
+        ren.disabled = true; // 名稱有改才能按
+        inp.addEventListener("input", function () { var v = inp.value.trim(); ren.disabled = !v || v === c; });
+        inp.addEventListener("keydown", function (e) { if (e.key === "Enter" && !ren.disabled) ren.click(); });
+        var del = btn("刪除", "刪除：" + c, function () { removeCat(c, mine.length); }, "danger");
+        [up, down, inp, num, ren, del].forEach(function (el) { row.appendChild(el); });
+        cRows.appendChild(row);
+      });
+    }
+    function moveCat(from, to) {
+      if (busy || to < 0 || to >= cats.length) return;
+      var next = cats.slice();
+      var c = next.splice(from, 1)[0];
+      next.splice(to, 0, c);
+      catRun(api("POST", "/api/admin/cats/reorder", { names: next }), "已調整順序：" + c);
+    }
+    function renameCat(from, to) {
+      if (busy || !to || to === from) return;
+      catRun(
+        api("PUT", "/api/admin/cats", { name: from, rename: to }).then(function () {
+          if (wCat === from) wCat = to; // 正在篩選這個分類 → 跟著改，列表才不會跳回全部
+        }),
+        "已改名：" + from + " → " + to
+      );
+    }
+    function removeCat(c, n) {
+      if (busy) return;
+      if (n) { catNote("「" + c + "」還有 " + n + " 筆作品（含已下架），請先把作品改到其他分類。", true); return; }
+      catRun(api("DELETE", "/api/admin/cats", { name: c }), "已刪除分類：" + c);
+    }
+    function addCat() {
+      var name = cNew.value.trim();
+      if (busy || !name) { cNew.focus(); return; }
+      catRun(api("POST", "/api/admin/cats", { name: name }).then(function () { cNew.value = ""; }), "已新增分類：" + name);
+    }
+    document.getElementById("c-add").addEventListener("click", addCat);
+    cNew.addEventListener("keydown", function (e) { if (e.key === "Enter") addCat(); });
+    document.getElementById("c-open").addEventListener("click", function () {
+      catNote("");
+      note("");
+      renderCats();
+      if (!cDialog.open) cDialog.showModal();
+    });
+    document.getElementById("c-close").addEventListener("click", function () { cDialog.close(); });
 
     /* ---------- 分頁 ---------- */
     var PANELS = { submissions: load, works: loadWorks }; // 分頁名 → 第一次開啟時的載入函式
