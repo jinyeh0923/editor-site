@@ -28,11 +28,10 @@ git pull
 
 | | 版本 |
 | --- | --- |
-| 本機 `feat/work-cats` | **`8633fe2` 管理分類 + 上架狀態篩選：還沒合併、沒 push、沒部署**（上線步驟見下方） |
-| 本機 `main` | 與 `origin/main` 同步（程式最後一版是 `eee7b43`，之後只有文件更新） |
-| Cloudflare 線上 | `1503cd6e-ea30-421f-937b-e13be5aa4035`（＝ `eee7b43` 的程式） |
+| 本機 `main` | 與 `origin/main` 同步（程式最後一版是 `8633fe2`，之後只有文件更新） |
+| Cloudflare 線上 | `d1c82a29-d84e-45eb-997c-34349d3de53a`（＝ `8633fe2` 的程式，2026-10-13 部署） |
 | 回復點 | tag `pre-works-admin` → `2946117`（內容後台上線前的最後一版） |
-| 已合併的分支 | `feat/works-admin`、`feat/media-upload`（都已進 `main`，留著沒刪） |
+| 已合併的分支 | `feat/works-admin`、`feat/media-upload`、`feat/work-cats`（都已進 `main`，留著沒刪） |
 
 線上網址：https://editor-site.editor-vincent.workers.dev
 GitHub：https://github.com/jinyeh0923/editor-site
@@ -48,14 +47,14 @@ GitHub：https://github.com/jinyeh0923/editor-site
 | 資源 | 名稱 | 內容 |
 | --- | --- | --- |
 | Worker | `editor-site` | 程式 + `public/` 靜態檔 |
-| D1 | `editor-site-db` | `submissions`（來件）、`works`（作品）；`work_cats`（分類）待 `feat/work-cats` 上線時建立 |
+| D1 | `editor-site-db` | `submissions`（來件）、`works`（作品）、`work_cats`（分類） |
 | R2 | `editor-site-media` | 後台上傳的圖，目前只有 `works/` 資料夾（作品封面） |
 
 R2 於 2026-10-13 啟用（帳號有綁付款方式，免費額度內不收費）。
 
 ---
 
-## 2026-10-13（下午）管理分類 + 上架狀態篩選（`8633fe2`，分支 `feat/work-cats`，**尚未上線**）
+## 2026-10-13（下午）管理分類 + 上架狀態篩選（`8633fe2`，已上線）
 
 客戶需求：能自己新增 / 刪除 / 修改分類；上架與下架的影片分開呈現，方便統計。
 
@@ -67,17 +66,11 @@ R2 於 2026-10-13 啟用（帳號有綁付款方式，免費額度內不收費�
 - **狀態篩選**（`#w-status`：全部 / 上架中 / 已下架），可與分類篩選併用，筆數跟著另一排變；標題旁的總數與管理分類跳窗都分開列上架 / 下架筆數
 - 篩選下的排序沿用原規則（只在列出來的那幾格裡換位置），`moveTo` 從「依分類」改成「依 `inView`」
 
-### 上線步驟（順序不能反）
-```bash
-git checkout main && git merge feat/work-cats
-npm run db:remote
-npx wrangler d1 execute editor-site-db --remote --file=./seed-work-cats.sql
-npm run deploy
-git push
-```
-- **先建表與匯入分類，再部署。** 反過來的話後台作品頁會讀取失敗（它同時抓作品與分類），前台不受影響
-- `seed-work-cats.sql` 會把線上 `works` 裡用過、但不在原本 4 類裡的分類補在後面，所以客戶自己打的新分類不會掉
-- 上線後確認：後台「管理分類」列得出分類、前台作品集篩選按鈕順序正確
+### 上線（2026-10-13）
+- 順序：合併進 `main` → 線上 D1 套 `schema.sql` → 匯入 `seed-work-cats.sql` → 部署。**先建表與匯入分類，再部署**；反過來的話後台作品頁會讀取失敗（它同時抓作品與分類）
+- 上線當下線上作品只用到原本那 4 個分類，`work_cats` 就是這 4 筆（順序同原本的 `WORK_CATS`）
+- 線上驗證過：`GET /api/cats` 回 4 個分類、`GET /api/works` 正常（63 筆上架）、`/work` 與 `works.js` 是新版、`/admin` 與 `/api/admin/cats` 沒登入回 401
+- **沒在線上驗證的**：登入後的後台操作（手上沒有線上密碼）。請登入 `/admin#works` 看一次「管理分類」與狀態篩選
 
 ### 測試
 - API 用 Node `fetch` 跑過正常流程與該擋的情況（重複名稱、刪有作品的分類、過期的排序清單、作品指定不存在的分類、沒帶 JSON Content-Type）
@@ -208,7 +201,7 @@ npx wrangler rollback           # 線上出問題時退回上一版（只退程�
 - [ ] `work.css` 的 `.w .ov p` 已是死樣式（`role` 移除後不再輸出 `<p>`）
 - [ ] `_headers` 的 CSP `script-src` 還留著 `https://cdn.jsdelivr.net`，但 Lenis 已自架，可收緊
 - [ ] `works.js` 卡片上的 `data-cat` 屬性目前沒有程式讀取
-- [ ] `feat/works-admin`、`feat/media-upload` 兩個分支已合併，可以刪
+- [ ] `feat/works-admin`、`feat/media-upload`、`feat/work-cats` 三個分支已合併，可以刪
 
 ---
 
